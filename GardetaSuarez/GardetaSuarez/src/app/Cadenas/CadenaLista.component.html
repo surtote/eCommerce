@@ -1,0 +1,23 @@
+﻿<table>
+    <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>ID</th>
+            <th>Sede</th>
+            <th>Ciudad</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr *ngFor="let cadena of cadenas">
+            <td><a [routerLink]="['/Cadena', cadena.nombre]">{{cadena.Nombre}}</a></td>
+            <td>{{cadena.ID}}</td>
+            <td>{{cadena.DireccionSede}}</td>
+            <td>{{cadena.Ciudad}}</td>
+
+
+        </tr>
+        <tr *ngIf="!cadenas || cadenas.length==0">
+            <td colspan="4">No hay cadenas</td>
+        </tr>
+    </tbody>
+</table>

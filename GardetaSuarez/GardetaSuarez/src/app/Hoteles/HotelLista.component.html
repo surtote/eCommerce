@@ -1,0 +1,21 @@
+﻿<!<table>
+    <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>ID</th>
+            <th>Ciudad</th>
+            <th>Direccion</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr *ngFor="let hoteles of hoteles">
+            <td><a [routerLink]="['/Hotel', hotel.Nombre]">{{hoteles.Nombre}}</a></td>
+            <td>{{hoteles.ID}}</td>
+            <td>{{hoteles.Ciudad}}</td>
+            <td>{{hoteles.Direccion}}</td>
+        </tr>
+        <tr *ngIf="!hoteles || hoteles.length==0">
+            <td colspan="3">No hay Hoteles</td>
+        </tr>
+    </tbody>
+</table>
