@@ -12,5 +12,12 @@
         public string? Direccion { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+
+        // Campos adicionales de Identity
+        public bool EmailConfirmed { get; set; }
+        public DateTimeOffset? LockoutEnd { get; set; }
+        public bool LockoutEnabled { get; set; }
+        public int AccessFailedCount { get; set; }
+        public IList<string> Roles { get; set; } = new List<string>();
     }
 }

@@ -19,12 +19,15 @@ namespace Identity.Controllers
         private readonly IUserService _userService;
         private readonly IConfiguration _configuration;
         private readonly UserManager<User> _userManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
 
-        public UserController(IUserService userService, IConfiguration configuration, UserManager<User> userManager)
+        public UserController(IUserService userService, IConfiguration configuration, UserManager<User> userManager, RoleManager<IdentityRole> roleManager)
         {
             _userService = userService;
             _configuration = configuration;
+            _roleManager = roleManager;
             _userManager = userManager;
+
         }
 
         // ✅ GET: api/user
@@ -128,6 +131,14 @@ namespace Identity.Controllers
                 User = userResponse
             });
         }
+        [Authorize]
+        [HttpGet("profile")]
+        public async Task<ActionResult<UserResponse>> GetProfile()
+        {
+            var userId = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+            var user = await _userService.GetUserByIdAsync(userId!);
+            return Ok(user);
+        }
 
         // 🔐 Generador de JWT
         private string GenerateJwtToken(UserResponse user)
@@ -155,6 +166,63 @@ namespace Identity.Controllers
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+        // 🔐 GET: api/user/claims
+        [HttpPost("validate-token")]
+        public ActionResult<IEnumerable<object>> ValidateToken([FromBody] TokenRequest request)
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!);
+
+            try
+            {
+                // Validar token
+                tokenHandler.ValidateToken(request.Token, new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ValidateIssuer = true,
+                    ValidIssuer = _configuration["Jwt:Issuer"],
+                    ValidateAudience = true,
+                    ValidAudience = _configuration["Jwt:Audience"],
+                    ClockSkew = TimeSpan.Zero
+                }, out SecurityToken validatedToken);
+
+                // Obtener claims
+                var jwtToken = (JwtSecurityToken)validatedToken;
+                var claims = jwtToken.Claims.Select(c => new { c.Type, c.Value }).ToList();
+
+                return Ok(claims);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "Token inválido", error = ex.Message });
+            }
+        }
+        [Authorize(Roles = "Admin")] // Solo admins pueden asignar roles
+        [HttpPost("assign-role")]
+        public async Task<IActionResult> AssignRoleToUser(string email, string roleName)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null) return NotFound("Usuario no encontrado");
+
+            // Crear el rol si no existe
+            var roleExists = await _roleManager.RoleExistsAsync(roleName);
+            if (!roleExists)
+                await _roleManager.CreateAsync(new IdentityRole(roleName));
+
+            // Verificar si el usuario ya tiene el rol
+            var hasRole = await _userManager.IsInRoleAsync(user, roleName);
+            if (hasRole)
+                return BadRequest($"El usuario ya tiene el rol '{roleName}'");
+
+            // Asignar rol
+            var result = await _userManager.AddToRoleAsync(user, roleName);
+            if (result.Succeeded)
+                return Ok($"Rol '{roleName}' asignado a {email}");
+
+            return BadRequest(result.Errors);
+        }
+
     }
 
     // DTOs auxiliares
@@ -168,5 +236,9 @@ namespace Identity.Controllers
     {
         public string Token { get; set; } = string.Empty;
         public UserResponse User { get; set; } = default!;
+    }
+    public class TokenRequest
+    {
+        public string Token { get; set; } = string.Empty;
     }
 }

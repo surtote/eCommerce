@@ -1,5 +1,8 @@
-﻿using Identity.Data;
+﻿using FluentValidation;
+using Identity.Data;
+using Identity.Features.Roles.V1;
 using Identity.Models;
+using Identity.Models.Roles.Request;
 using Identity.Repository;
 using Identity.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -10,9 +13,17 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add Aspire Service Defaults (OpenTelemetry, Health Checks, Service Discovery, Resilience)
+builder.AddServiceDefaults();
+builder.Services.AddOpenApi();
+
+
 // 🔹 DbContext usando Npgsql
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("eCommerce")));
+//builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//    options.UseNpgsql(builder.Configuration.GetConnectionString("eCommerce")));
+
+builder.AddNpgsqlDbContext<ApplicationDbContext>("eCommerce");
+
 
 // 🔹 Identity
 builder.Services.AddIdentity<User, IdentityRole>()
@@ -22,6 +33,10 @@ builder.Services.AddIdentity<User, IdentityRole>()
 // 🔹 Servicios
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<Identity.Services.IRolesService, Identity.Services.RoleService>();
+builder.Services.AddScoped<Identity.Services.Common.ServiceResult, Identity.Services.Common.ServiceResult>();
+builder.Services.AddValidatorsFromAssemblyContaining<CreateRoleRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<UpdateRoleRequest>();
 builder.Configuration.AddUserSecrets<Program>();
 // 🔹 JWT
 var jwt = builder.Configuration.GetSection("Jwt");
@@ -56,6 +71,14 @@ builder.Services.AddCors(options =>
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddApiVersioning(options =>
+{
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.DefaultApiVersion = new Asp.Versioning.ApiVersion(1, 0);
+    options.ReportApiVersions = true;
+});
+
+
 
 var app = builder.Build();
 
@@ -81,5 +104,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
+var rolesGroup = app.MapGroup("/api/v1/admin/roles")
+                    .WithOpenApi();
+// si quieres auth
+app.MapRoleEndpoints(); 
 app.Run();

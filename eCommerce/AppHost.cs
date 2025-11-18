@@ -6,7 +6,10 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 // 🗄️ 1️⃣ PostgreSQL persistente
 var postgres = builder.AddPostgres("postgres")
-    .WithLifetime(ContainerLifetime.Persistent);
+    .WithLifetime(ContainerLifetime.Persistent)
+    .WithDataVolume("ecommerce_postgres_data") // 👈 nombre nuevo de volumen
+    .WithEnvironment("POSTGRES_USER", "postgres");
+
 
 // 🗃️ 2️⃣ Base de datos
 var db = postgres.AddDatabase("eCommerce");
