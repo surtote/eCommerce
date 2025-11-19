@@ -4,9 +4,7 @@ namespace Identity.Features.Users.V1
 {
     public static class UserManagementGroup
     {
-        /// <summary>
-        /// Creates and configures the V1 admin user management API group with common settings.
-        /// </summary>
+        /// ADMIN USER MANAGEMENT
         public static RouteGroupBuilder MapAdminUserGroup(this IEndpointRouteBuilder endpoints)
         {
             var versionSet = endpoints.NewApiVersionSet()
@@ -17,13 +15,12 @@ namespace Identity.Features.Users.V1
             return endpoints
                 .MapGroup("/api/v{version:apiVersion}/admin/users")
                 .WithApiVersionSet(versionSet)
-                .WithTags("User Management")
+                .MapToApiVersion(new ApiVersion(1, 0))   // 🔥 NECESARIO
+                .WithTags("Admin User Management")
                 .RequireAuthorization(policy => policy.RequireRole(Data.Roles.Admin));
         }
 
-        /// <summary>
-        /// Creates and configures the V1 user self-management API group with common settings.
-        /// </summary>
+        /// USER SELF-MANAGEMENT
         public static RouteGroupBuilder MapUserSelfGroup(this IEndpointRouteBuilder endpoints)
         {
             var versionSet = endpoints.NewApiVersionSet()
@@ -34,6 +31,7 @@ namespace Identity.Features.Users.V1
             return endpoints
                 .MapGroup("/api/v{version:apiVersion}/users")
                 .WithApiVersionSet(versionSet)
+                .MapToApiVersion(new ApiVersion(1, 0))   // 🔥 NECESARIO
                 .WithTags("User Self-Management")
                 .RequireAuthorization();
         }

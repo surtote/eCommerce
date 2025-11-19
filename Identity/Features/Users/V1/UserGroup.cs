@@ -8,8 +8,14 @@
             var adminGroup = endpoints.MapAdminUserGroup();
             adminGroup.MapGetUsers();
             adminGroup.MapGetUserById();
-          
-
+            adminGroup.MapCreateUser();
+            adminGroup.MapUpdateUser();
+            adminGroup.MapDeleteUser();
+            adminGroup.MapLockUser();
+            adminGroup.MapUnlockUser();
+            adminGroup.MapGetUserRoles();
+            adminGroup.MapAssignUserRole();
+            adminGroup.MapRemoveUserRole();
             // Self-Management (grouped under "User Self-Management" tag)
             //var selfGroup = endpoints.MapUserSelfGroup();
             //selfGroup.MapGetMyProfile();

@@ -26,9 +26,9 @@ namespace Identity.Features.Users.V1
 
 
         private static async Task<IResult> HandleAsync(
-    string userId,
-    IUserService userService,
-    ILogger<string> logger)
+        string userId,
+        IUserService userService,
+         ILogger<string> logger)
         {
             logger.LogInformation("Fetching user details for: {UserId}", userId);
 

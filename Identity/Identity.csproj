@@ -20,6 +20,7 @@
     <!-- JWT y Identity -->
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Versioning.ApiExplorer" Version="5.1.0" />
 
     <!-- OpenApi / Swagger -->
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.11" />
@@ -41,6 +42,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Extension\" />
   </ItemGroup>
 
 </Project>

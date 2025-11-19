@@ -99,8 +99,139 @@ namespace Identity.Services
 
             return PaginatedResult<UserResponse>.Create(userResponses, page, pageSize, totalCount);
         }
+        public async Task<ServiceResult> LockUserAsync(string userId, DateTimeOffset? lockoutEnd)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user is null)
+            {
+                return ServiceResult.Failure("User not found");
+            }
 
+            // If no lockout end specified, lock for 100 years (effectively permanent)
+            var lockEnd = lockoutEnd ?? DateTimeOffset.UtcNow.AddYears(100);
 
+            var lockResult = await _userManager.SetLockoutEndDateAsync(user, lockEnd);
+            if (!lockResult.Succeeded)
+            {
+                var errors = lockResult.Errors.Select(e => e.Description);
+                return ServiceResult.Failure(errors);
+            }
+
+            _logger.LogInformation("User locked successfully: {UserId} until {LockoutEnd}",
+                userId, lockEnd);
+
+            return ServiceResult.Success("User account locked successfully");
+        }
+
+        /// <summary>
+        /// Unlock user account
+        /// </summary>
+        public async Task<ServiceResult> UnlockUserAsync(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user is null)
+            {
+                return ServiceResult.Failure("User not found");
+            }
+
+            // Clear lockout
+            var unlockResult = await _userManager.SetLockoutEndDateAsync(user, null);
+            if (!unlockResult.Succeeded)
+            {
+                var errors = unlockResult.Errors.Select(e => e.Description);
+                return ServiceResult.Failure(errors);
+            }
+
+            // Reset access failed count
+            var resetResult = await _userManager.ResetAccessFailedCountAsync(user);
+            if (!resetResult.Succeeded)
+            {
+                _logger.LogWarning("Failed to reset access failed count for user {UserId}", userId);
+            }
+
+            _logger.LogInformation("User unlocked successfully: {UserId}", userId);
+
+            return ServiceResult.Success("User account unlocked successfully");
+        }
+
+        /// <summary>
+        /// Get current user's full profile
+        /// </summary>
+        public async Task<ServiceResult<IEnumerable<string>>> GetUserRolesAsync(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user is null)
+            {
+                return ServiceResult<IEnumerable<string>>.Failure("User not found");
+            }
+
+            var roles = await _userManager.GetRolesAsync(user);
+
+            return ServiceResult<IEnumerable<string>>.Success(roles);
+        }
+        public async Task<ServiceResult> AddUserToRoleAsync(string userId, string roleName)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user is null)
+            {
+                return ServiceResult.Failure("User not found");
+            }
+
+            // Check if role exists
+            var roleExists = await _userManager.GetRolesAsync(user);
+            if (roleExists.Contains(roleName))
+            {
+                return ServiceResult.Failure("User already has this role");
+            }
+
+            var addResult = await _userManager.AddToRoleAsync(user, roleName);
+            if (!addResult.Succeeded)
+            {
+                var errors = addResult.Errors.Select(e => e.Description);
+                return ServiceResult.Failure(errors);
+            }
+
+            _logger.LogInformation("Role {Role} assigned to user {UserId}", roleName, userId);
+
+            return ServiceResult.Success($"Role '{roleName}' assigned successfully");
+        }
+
+        /// <summary>
+        /// Remove role from user
+        /// </summary>
+        public async Task<ServiceResult> RemoveUserFromRoleAsync(string userId, string roleName)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user is null)
+            {
+                return ServiceResult.Failure("User not found");
+            }
+
+            // Check if user has the role
+            var hasRole = await _userManager.IsInRoleAsync(user, roleName);
+            if (!hasRole)
+            {
+                return ServiceResult.Failure("User does not have this role");
+            }
+
+            // Prevent removing last role
+            var userRoles = await _userManager.GetRolesAsync(user);
+            if (userRoles.Count <= 1)
+            {
+                return ServiceResult.Failure("Cannot remove the last role from user. Users must have at least one role.");
+            }
+
+            var removeResult = await _userManager.RemoveFromRoleAsync(user, roleName);
+            if (!removeResult.Succeeded)
+            {
+                var errors = removeResult.Errors.Select(e => e.Description);
+                return ServiceResult.Failure(errors);
+            }
+
+            _logger.LogInformation("Role {Role} removed from user {UserId}", roleName, userId);
+
+            return ServiceResult.Success($"Role '{roleName}' removed successfully");
+        }
         public async Task<IEnumerable<UserResponse>> GetAllUsersAsync()
         {
             var users = await _userRepository.GetAllAsync();

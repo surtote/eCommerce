@@ -16,10 +16,12 @@ namespace Identity.Features.Roles.V1
                 .Build();
 
             return endpoints
-                .MapGroup("/api/admin/roles")
-                .WithApiVersionSet(versionSet)
-                .WithTags("Role Management")
-                .RequireAuthorization(policy => policy.RequireRole(Data.Roles.Admin));
+     .MapGroup("/api/v{version:apiVersion}/admin/roles")
+     .WithApiVersionSet(versionSet)
+     .MapToApiVersion(new ApiVersion(1, 0))   // 🔥 NECESARIO
+     .WithTags("Role Management")
+     .RequireAuthorization(policy => policy.RequireRole(Data.Roles.Admin));
+
         }
     }
 }

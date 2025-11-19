@@ -1,8 +1,10 @@
 ﻿using FluentValidation;
 using Identity.Data;
 using Identity.Features.Roles.V1;
+using Identity.Features.Users.V1;
 using Identity.Models;
 using Identity.Models.Roles.Request;
+using Identity.Models.Users.Request;
 using Identity.Repository;
 using Identity.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -23,12 +25,42 @@ builder.Services.AddOpenApi();
 //    options.UseNpgsql(builder.Configuration.GetConnectionString("eCommerce")));
 
 builder.AddNpgsqlDbContext<ApplicationDbContext>("eCommerce");
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = " Identity API", Version = "v1" });
 
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Ingrese 'Bearer {token}' para autenticarse"
+    });
+
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+});
 
 // 🔹 Identity
 builder.Services.AddIdentity<User, IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
+
+builder.Services.AddAuthorization();
 
 // 🔹 Servicios
 builder.Services.AddScoped<IUserService, UserService>();
@@ -37,6 +69,9 @@ builder.Services.AddScoped<Identity.Services.IRolesService, Identity.Services.Ro
 builder.Services.AddScoped<Identity.Services.Common.ServiceResult, Identity.Services.Common.ServiceResult>();
 builder.Services.AddValidatorsFromAssemblyContaining<CreateRoleRequestValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<UpdateRoleRequest>();
+builder.Services.AddValidatorsFromAssemblyContaining<CreateUserRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<UpdateUserRequestValidator>();
+
 builder.Configuration.AddUserSecrets<Program>();
 // 🔹 JWT
 var jwt = builder.Configuration.GetSection("Jwt");
@@ -70,13 +105,18 @@ builder.Services.AddCors(options =>
 // 🔹 Controladores y Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 builder.Services.AddApiVersioning(options =>
 {
     options.AssumeDefaultVersionWhenUnspecified = true;
     options.DefaultApiVersion = new Asp.Versioning.ApiVersion(1, 0);
     options.ReportApiVersions = true;
 });
+//builder.Services.AddVersionedApiExplorer(options =>
+//{
+//    options.GroupNameFormat = "'v'VVV";
+//    options.SubstituteApiVersionInUrl = true; // Necesario para reemplazar {version}
+//});
+
 
 
 
@@ -88,7 +128,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "OrderFlow Identity API V1");
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Identity API V1");
     });
 
     // AUTO-MIGRATE DATABASE ON STARTUP
@@ -104,8 +144,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-var rolesGroup = app.MapGroup("/api/v1/admin/roles")
-                    .WithOpenApi();
 // si quieres auth
-app.MapRoleEndpoints(); 
+app.MapRoleEndpoints();
+// User management endpoints
+app.MapUserEndpoints();
 app.Run();
