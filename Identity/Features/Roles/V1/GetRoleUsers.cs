@@ -10,17 +10,17 @@ namespace Identity.Features.Roles.V1
         public static RouteGroupBuilder MapGetRoleUsers(this RouteGroupBuilder group)
         {
             group.MapGet("/{roleId}/users", HandleAsync)
-                 .WithName("GetRoleUsersV1")
-                 .WithOpenApi(operation =>
-                 {
-                     operation.Summary = "Get users in a role";
-                     operation.Description = "Returns a paginated list of users assigned to a specific role. Requires Admin role.";
-                     return operation;
-                 })
-                 .Produces<PaginatedResponse<Identity.DTO.UserResponse>>(StatusCodes.Status200OK) // ✅ Cambiado
-                 .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
-                 .Produces(StatusCodes.Status401Unauthorized)
-                 .Produces(StatusCodes.Status403Forbidden);
+                .WithName("GetRoleUsersV1")
+                .AddOpenApiOperationTransformer((operation, context, ct) =>
+                {
+                    operation.Summary = "Get users in a role";
+                    operation.Description = "Returns a paginated list of users assigned to a specific role. Requires Admin role.";
+                    return Task.CompletedTask;
+                })
+                .Produces<PaginatedResponse<UserResponse>>(StatusCodes.Status200OK)
+                .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .Produces(StatusCodes.Status403Forbidden);
 
             return group;
         }

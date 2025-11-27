@@ -15,8 +15,7 @@ namespace Identity.Features.Users.V1
             return endpoints
                 .MapGroup("/api/v{version:apiVersion}/admin/users")
                 .WithApiVersionSet(versionSet)
-                .MapToApiVersion(new ApiVersion(1, 0))   // 🔥 NECESARIO
-                .WithTags("Admin User Management")
+                .WithTags("User Management")
                 .RequireAuthorization(policy => policy.RequireRole(Data.Roles.Admin));
         }
 

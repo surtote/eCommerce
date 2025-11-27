@@ -10,23 +10,22 @@ namespace Identity.Features.Users.V1
         public static RouteGroupBuilder MapUpdateUser(this RouteGroupBuilder group)
         {
             group.MapPut("/{userId}", HandleAsync)
-                 .WithName("UpdateUserV1")
-                 .WithOpenApi(operation =>
-                 {
-                     operation.Summary = "Update user information";
-                     operation.Description = "Updates a user's information. Requires Admin role.";
-                     return operation;
-                 })
-                 .Produces<UserResponse>(StatusCodes.Status200OK)
-                 .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
-                 .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
-                 .Produces(StatusCodes.Status401Unauthorized)
-                 .Produces(StatusCodes.Status403Forbidden)
-                 .DisableAntiforgery();
+                .WithName("UpdateUserV1")
+                .AddOpenApiOperationTransformer((operation, context, ct) =>
+                {
+                    operation.Summary = "Update user information";
+                    operation.Description = "Updates a user's information. Requires Admin role.";
+                    return Task.CompletedTask;
+                })
+                .Produces<UserResponse>(StatusCodes.Status200OK)
+                .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+                .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .Produces(StatusCodes.Status403Forbidden)
+                .DisableAntiforgery();
 
             return group;
         }
-
         private static async Task<IResult> HandleAsync(
             string userId,
             UpdateUserRequest? request,

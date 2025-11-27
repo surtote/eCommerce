@@ -6,25 +6,24 @@ using Identity.Services;
     {
         public static class DeleteUser
         {
-            public static RouteGroupBuilder MapDeleteUser(this RouteGroupBuilder group)
-            {
-                group.MapDelete("/{userId}", HandleAsync)
-                     .WithName("DeleteUserV1")
-                     .WithOpenApi(operation =>
-                     {
-                         operation.Summary = "Delete user";
-                         operation.Description = "Permanently deletes a user account. Requires Admin role.";
-                         return operation;
-                     })
-                     .Produces(StatusCodes.Status204NoContent)
-                     .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
-                     .Produces(StatusCodes.Status401Unauthorized)
-                     .Produces(StatusCodes.Status403Forbidden);
+        public static RouteGroupBuilder MapDeleteUser(this RouteGroupBuilder group)
+        {
+            group.MapDelete("/{userId}", HandleAsync)
+                .WithName("DeleteUserV1")
+                .AddOpenApiOperationTransformer((operation, context, ct) =>
+                {
+                    operation.Summary = "Delete user";
+                    operation.Description = "Permanently deletes a user account. Requires Admin role.";
+                    return Task.CompletedTask;
+                })
+                .Produces(StatusCodes.Status204NoContent)
+                .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .Produces(StatusCodes.Status403Forbidden);
 
-                return group;
-            }
-
-            private static async Task<IResult> HandleAsync(
+            return group;
+        }
+        private static async Task<IResult> HandleAsync(
                 string userId,
                 IUserService userService,
                 ILogger<string> logger)

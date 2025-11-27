@@ -10,21 +10,22 @@ namespace Identity.Features.Users.V1
         public static RouteGroupBuilder MapCreateUser(this RouteGroupBuilder group)
         {
             group.MapPost("/", HandleAsync)
-                 .WithName("CreateUserV1")
-                 .WithOpenApi(operation =>
-                 {
-                     operation.Summary = "Create a new user";
-                     operation.Description = "Creates a new user account with specified roles. Requires Admin role.";
-                     return operation;
-                 })
-                 .Produces<UserResponse>(StatusCodes.Status201Created)
-                 .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
-                 .Produces(StatusCodes.Status401Unauthorized)
-                 .Produces(StatusCodes.Status403Forbidden)
-                 .DisableAntiforgery();
+                .WithName("CreateUserV1")
+                .AddOpenApiOperationTransformer((operation, context, ct) =>
+                {
+                    operation.Summary = "Create a new user";
+                    operation.Description = "Creates a new user account with specified roles. Requires Admin role.";
+                    return Task.CompletedTask;
+                })
+                .Produces<UserResponse>(StatusCodes.Status201Created)
+                .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .Produces(StatusCodes.Status403Forbidden)
+                .DisableAntiforgery();
 
             return group;
         }
+
 
 
         private static async Task<IResult> HandleAsync(

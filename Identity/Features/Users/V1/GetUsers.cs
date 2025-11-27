@@ -10,16 +10,16 @@ namespace Identity.Features.Users.V1
         public static RouteGroupBuilder MapGetUsers(this RouteGroupBuilder group)
         {
             group.MapGet("/", HandleAsync)
-                 .WithName("GetUsersV1")
-                 .WithOpenApi(operation =>
-                 {
-                     operation.Summary = "Get all users";
-                     operation.Description = "Returns a paginated list of users with optional filtering and sorting. Requires Admin role.";
-                     return operation;
-                 })
-                 .Produces<PaginatedResponse<UserResponse>>(StatusCodes.Status200OK)
-                 .Produces(StatusCodes.Status401Unauthorized)
-                 .Produces(StatusCodes.Status403Forbidden);
+                .WithName("GetUsersV1")
+                .AddOpenApiOperationTransformer((operation, context, ct) =>
+                {
+                    operation.Summary = "Get all users";
+                    operation.Description = "Returns a paginated list of users with optional filtering and sorting. Requires Admin role.";
+                    return Task.CompletedTask;
+                })
+                .Produces<PaginatedResponse<UserResponse>>(StatusCodes.Status200OK)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .Produces(StatusCodes.Status403Forbidden);
 
             return group;
         }

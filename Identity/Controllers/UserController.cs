@@ -93,10 +93,10 @@ namespace Identity.Controllers
             return NoContent();
         }
 
-        // ✅ POST: api/user/login
         [HttpPost("login")]
         public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest loginRequest)
         {
+            // Obtener usuario de Identity
             var user = await _userManager.FindByNameAsync(loginRequest.UserName)
                        ?? await _userManager.FindByEmailAsync(loginRequest.UserName);
 
@@ -108,7 +108,10 @@ namespace Identity.Controllers
             if (!passwordValid)
                 return Unauthorized(new { message = "Credenciales inválidas" });
 
-            // Mapear minimo a UserResponse
+            // Obtener roles correctamente desde UserManager
+            var roles = await _userManager.GetRolesAsync(user);
+
+            // Mapear a DTO para respuesta
             var userResponse = new UserResponse
             {
                 Id = user.Id,
@@ -120,10 +123,12 @@ namespace Identity.Controllers
                 Telefono = 0,
                 Direccion = "",
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = null
+                UpdatedAt = null,
+                Roles = roles.ToList() // ✅ Asignar roles al DTO
             };
 
-            var token = GenerateJwtToken(userResponse);
+            // Generar token incluyendo roles
+            var token = GenerateJwtToken(user, roles); // ahora pasamos la entidad y los roles
 
             return Ok(new LoginResponse
             {
@@ -131,6 +136,8 @@ namespace Identity.Controllers
                 User = userResponse
             });
         }
+
+
         [Authorize]
         [HttpGet("profile")]
         public async Task<ActionResult<UserResponse>> GetProfile()
@@ -141,20 +148,24 @@ namespace Identity.Controllers
         }
 
         // 🔐 Generador de JWT
-        private string GenerateJwtToken(UserResponse user)
+        private string GenerateJwtToken(User user, IList<string> roles)
         {
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-            var claims = new[]
+            var claims = new List<Claim>
+    {
+        new Claim(ClaimTypes.NameIdentifier, user.Id),
+        new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName ?? ""),
+        new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
+        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+    };
+
+            // Agregar roles al token
+            foreach (var role in roles)
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id), // ahora es string
-                new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
-                new Claim("nombre", user.Nombre),
-                new Claim("apellido", user.Apellido),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            };
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
 
             var token = new JwtSecurityToken(
                 issuer: _configuration["Jwt:Issuer"],
@@ -166,6 +177,8 @@ namespace Identity.Controllers
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+
+
         // 🔐 GET: api/user/claims
         [HttpPost("validate-token")]
         public ActionResult<IEnumerable<object>> ValidateToken([FromBody] TokenRequest request)

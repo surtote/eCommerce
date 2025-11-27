@@ -8,20 +8,19 @@ namespace Identity.Features.Roles.V1
         public static RouteGroupBuilder MapGetRoles(this RouteGroupBuilder group)
         {
             group.MapGet("/", HandleAsync)
-                 .WithName("GetRolesV1")
-                 .WithOpenApi(operation =>
-                 {
-                     operation.Summary = "Get all roles";
-                     operation.Description = "Returns a list of all roles in the system. Requires Admin role.";
-                     return operation;
-                 })
-                 .Produces<IEnumerable<Models.Roles.Responses.RoleResponse>>(StatusCodes.Status200OK)
-                 .Produces(StatusCodes.Status401Unauthorized)
-                 .Produces(StatusCodes.Status403Forbidden);
+                .WithName("GetRolesV1")
+                .AddOpenApiOperationTransformer((operation, context, ct) =>
+                {
+                    operation.Summary = "Get all roles";
+                    operation.Description = "Returns a list of all roles in the system. Requires Admin role.";
+                    return Task.CompletedTask;
+                })
+                .Produces<IEnumerable<Models.Roles.Responses.RoleResponse>>(StatusCodes.Status200OK)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .Produces(StatusCodes.Status403Forbidden);
 
             return group;
         }
-
 
         private static async Task<IResult> HandleAsync(
             IRolesService roleService,

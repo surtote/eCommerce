@@ -12,12 +12,21 @@ namespace Identity.Features.Roles.V1
         {
             group.MapPost("/", HandleAsync)
                 .WithName("CreateRoleV1")
-                .WithOpenApi()
-                .Produces<RoleResponse>(StatusCodes.Status201Created)
-                .Produces<ErrorResponse>(StatusCodes.Status400BadRequest);
+                .AddOpenApiOperationTransformer((operation, context, ct) =>
+                {
+                    operation.Summary = "Create a new role";
+                    operation.Description = "Creates a new role in the system. Requires Admin role.";
+                    return Task.CompletedTask;
+                })
+                .Produces<Models.Roles.Responses.RoleResponse>(StatusCodes.Status201Created)
+                .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .Produces(StatusCodes.Status403Forbidden)
+                .DisableAntiforgery();
 
             return group;
         }
+
 
         private static async Task<IResult> HandleAsync(
             CreateRoleRequest request,

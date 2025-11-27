@@ -3,8 +3,10 @@ using Identity.Models;
 using Identity.Models.Query;
 using Identity.Repository;
 using Identity.Services.Common;
+using MassTransit;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Shared.Events;
 
 namespace Identity.Services
 {
@@ -14,14 +16,17 @@ namespace Identity.Services
         private readonly PasswordHasher<User> _passwordHasher;
         private readonly UserManager<User> _userManager;
         private readonly ILogger<UserService> _logger;
+        private readonly ITokenService _tokenService; 
+        private readonly IPublishEndpoint _publishEndpoint;
 
-
-        public UserService(IUserRepository userRepository, UserManager<User> userManager, ILogger<UserService> logger)
+        public UserService(IUserRepository userRepository, UserManager<User> userManager, ILogger<UserService> logger, ITokenService tokenService, IPublishEndpoint publishEndpoint)
         {
             _userRepository = userRepository;
             _passwordHasher = new PasswordHasher<User>();
             _userManager = userManager;
             _logger = logger;
+            _tokenService = tokenService;
+            _publishEndpoint = publishEndpoint;
         }
 
         public async Task<UserResponse?> GetUserByIdAsync(string id)
@@ -251,9 +256,50 @@ namespace Identity.Services
                 Telefono = request.Telefono
             };
 
+            // Crear usuario primero
             var createdUser = await _userRepository.CreateAsync(user, request.Password);
+
+            // Publicar evento después
+            await _publishEndpoint.Publish(new UserRegisteredEvent(
+                UserId: createdUser.Id,
+                Email: createdUser.Email!,
+                Nombre: createdUser.Nombre,
+                Apellido: createdUser.Apellido
+            ));
+
             return MapToResponse(createdUser);
         }
+
+        public async Task<LoginResponse?> LoginAsync(string usernameOrEmail, string password)
+        {
+            var user = await _userManager.FindByNameAsync(usernameOrEmail)
+                       ?? await _userManager.FindByEmailAsync(usernameOrEmail);
+
+            if (user == null)
+                return null;
+
+            var isValid = await _userManager.CheckPasswordAsync(user, password);
+            if (!isValid)
+                return null;
+
+            var roles = await _userManager.GetRolesAsync(user);
+
+            var userResponse = new LoginRequest
+            {
+                UserName = user.UserName!,
+                Password = user.PasswordHash!
+            };
+
+            // ✅ Usar TokenService inyectado en lugar de parámetro
+            var token = await _tokenService.GenerateJwtToken(user, roles);
+
+            return new LoginResponse
+            {
+                Token = token,
+                User = userResponse
+            };
+        }
+
 
         public async Task<UserResponse?> UpdateUserAsync(string id, UpdateUserRequest request)
         {
@@ -296,5 +342,16 @@ namespace Identity.Services
                 Direccion = user.Direccion
             };
         }
+    }
+    public class LoginResponse
+    {
+        public string Token { get; set; } = string.Empty;
+        public LoginRequest User { get; set; } = default!;
+    }
+     public class LoginRequest
+    {
+        public string UserName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
     }
 }

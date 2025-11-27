@@ -8,18 +8,18 @@ namespace Identity.Features.Users.V1
         public static RouteGroupBuilder MapUnlockUser(this RouteGroupBuilder group)
         {
             group.MapPost("/{userId}/unlock", HandleAsync)
-                 .WithName("UnlockUserV1")
-                 .WithOpenApi(operation =>
-                 {
-                     operation.Summary = "Unlock user account";
-                     operation.Description = "Unlocks a user account to allow login. Requires Admin role.";
-                     return operation;
-                 })
-                 .Produces(StatusCodes.Status200OK)
-                 .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
-                 .Produces(StatusCodes.Status401Unauthorized)
-                 .Produces(StatusCodes.Status403Forbidden)
-                 .DisableAntiforgery();
+                .WithName("UnlockUserV1")
+                .AddOpenApiOperationTransformer((operation, context, ct) =>
+                {
+                    operation.Summary = "Unlock user account";
+                    operation.Description = "Unlocks a user account to allow login. Requires Admin role.";
+                    return Task.CompletedTask;
+                })
+                .Produces(StatusCodes.Status200OK)
+                .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .Produces(StatusCodes.Status403Forbidden)
+                .DisableAntiforgery();
 
             return group;
         }

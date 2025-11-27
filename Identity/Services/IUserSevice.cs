@@ -13,7 +13,7 @@ namespace Identity.Services
         Task<IEnumerable<UserResponse>> GetAllUsersAsync();
         Task<ServiceResult<IEnumerable<string>>> GetUserRolesAsync(string userId);
         Task<ServiceResult> AddUserToRoleAsync(string userId, string roleName);
-
+        Task<LoginResponse?> LoginAsync(string usernameOrEmail, string password);
         /// <summary>
         /// Remove role from user
         /// </summary>

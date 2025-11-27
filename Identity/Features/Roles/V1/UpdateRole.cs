@@ -10,19 +10,19 @@ namespace Identity.Features.Roles.V1
         public static RouteGroupBuilder MapUpdateRole(this RouteGroupBuilder group)
         {
             group.MapPut("/{roleId}", HandleAsync)
-                 .WithName("UpdateRoleV1")
-                 .WithOpenApi(operation =>
-                 {
-                     operation.Summary = "Update a role";
-                     operation.Description = "Updates an existing role's name. Requires Admin role.";
-                     return operation;
-                 })
-                 .Produces<Models.Roles.Responses.RoleResponse>(StatusCodes.Status200OK)
-                 .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
-                 .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
-                 .Produces(StatusCodes.Status401Unauthorized)
-                 .Produces(StatusCodes.Status403Forbidden)
-                 .DisableAntiforgery();
+                .WithName("UpdateRoleV1")
+                .AddOpenApiOperationTransformer((operation, context, ct) =>
+                {
+                    operation.Summary = "Update a role";
+                    operation.Description = "Updates an existing role's name. Requires Admin role.";
+                    return Task.CompletedTask;
+                })
+                .Produces<Models.Roles.Responses.RoleResponse>(StatusCodes.Status200OK)
+                .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+                .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .Produces(StatusCodes.Status403Forbidden)
+                .DisableAntiforgery();
 
             return group;
         }

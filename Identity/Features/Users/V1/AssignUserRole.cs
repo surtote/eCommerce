@@ -8,22 +8,23 @@ namespace Identity.Features.Users.V1
         public static RouteGroupBuilder MapAssignUserRole(this RouteGroupBuilder group)
         {
             group.MapPost("/{userId}/roles/{roleName}", HandleAsync)
-                 .WithName("AssignUserRoleV1")
-                 .WithOpenApi(operation =>
-                 {
-                     operation.Summary = "Assign role to user";
-                     operation.Description = "Assigns a role to a user. Requires Admin role.";
-                     return operation;
-                 })
-                 .Produces(StatusCodes.Status200OK)
-                 .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
-                 .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
-                 .Produces(StatusCodes.Status401Unauthorized)
-                 .Produces(StatusCodes.Status403Forbidden)
-                 .DisableAntiforgery();
+                .WithName("AssignUserRoleV1")
+                .AddOpenApiOperationTransformer((operation, context, ct) =>
+                {
+                    operation.Summary = "Assign role to user";
+                    operation.Description = "Assigns a role to a user. Requires Admin role.";
+                    return Task.CompletedTask;
+                })
+                .Produces(StatusCodes.Status200OK)
+                .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+                .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .Produces(StatusCodes.Status403Forbidden)
+                .DisableAntiforgery();
 
             return group;
         }
+
 
         private static async Task<IResult> HandleAsync(
             string userId,

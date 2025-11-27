@@ -8,18 +8,18 @@ namespace Identity.Features.Roles.V1
         public static RouteGroupBuilder MapDeleteRole(this RouteGroupBuilder group)
         {
             group.MapDelete("/{roleId}", HandleAsync)
-                 .WithName("DeleteRoleV1")
-                 .WithOpenApi(operation =>
-                 {
-                     operation.Summary = "Delete a role";
-                     operation.Description = "Deletes a role from the system. Cannot delete roles that have users assigned. Requires Admin role.";
-                     return operation;
-                 })
-                 .Produces(StatusCodes.Status200OK)
-                 .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
-                 .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
-                 .Produces(StatusCodes.Status401Unauthorized)
-                 .Produces(StatusCodes.Status403Forbidden);
+                .WithName("DeleteRoleV1")
+                .AddOpenApiOperationTransformer((operation, context, ct) =>
+                {
+                    operation.Summary = "Delete a role";
+                    operation.Description = "Deletes a role from the system. Cannot delete roles that have users assigned. Requires Admin role.";
+                    return Task.CompletedTask;
+                })
+                .Produces(StatusCodes.Status200OK)
+                .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+                .Produces<ErrorResponse>(StatusCodes.Status404NotFound)
+                .Produces(StatusCodes.Status401Unauthorized)
+                .Produces(StatusCodes.Status403Forbidden);
 
             return group;
         }
