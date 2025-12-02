@@ -6,6 +6,8 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { Product } from "@/types/Product";
 import { CategoryDropdown } from "../components/categoryDropdown";
 import Image from 'next/image';
+import { Trash2 } from "lucide-react"; // icono de papelera
+
 export const ProductList = () => {
   const {
     products,
@@ -15,28 +17,32 @@ export const ProductList = () => {
     selectedCategory,
     setSelectedCategory,
     fetchProducts,
+    deleteProduct,
   } = useProducts();
 
-  // 🔹 Obtener el usuario actual del sessionStorage
   const currentUser =
     typeof window !== "undefined"
       ? JSON.parse(sessionStorage.getItem("currentUser") || "{}")
       : null;
   const currentUserId = currentUser?.id || null;
 
-  // 🔹 Filtrar productos para que solo muestre los del usuario logueado
   const filteredProducts = React.useMemo(() => {
     if (!currentUserId) return products;
     return products.filter((p) => p.userId === currentUserId);
   }, [products, currentUserId]);
 
-  // 🔹 Manejar cambio de categoría
   const handleCategoryChange = (categoryId: string | null) => {
     if (categoryId) {
       fetchProductsByCategory(categoryId);
     } else {
       setSelectedCategory(null);
-      fetchProducts(); // Mostrar todos si se elige "Todas las categorías"
+      fetchProducts();
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm("¿Seguro que deseas eliminar este producto?")) {
+      await deleteProduct(id);
     }
   };
 
@@ -72,12 +78,24 @@ export const ProductList = () => {
           <Image
             src={`data:${info.row.original.imageContentType};base64,${value}`}
             alt={info.row.original.name}
-            width={64}   // equivalente a w-16
-            height={64}  // equivalente a h-16
+            width={64}
+            height={64}
             className="object-cover rounded"
           />
         );
       },
+    },
+    {
+      id: "actions",
+      header: "Acciones",
+      cell: (info) => (
+        <button
+          onClick={() => handleDelete(info.row.original.id)}
+          className="text-red-500 hover:text-red-700"
+        >
+          <Trash2 size={18} />
+        </button>
+      ),
     },
   ];
 
@@ -88,7 +106,6 @@ export const ProductList = () => {
     <div className="p-4">
       <h2 className="mb-4 text-lg font-semibold">Mis Productos</h2>
 
-      {/* 🔹 Dropdown para filtrar por categoría */}
       <div className="mb-4">
         <CategoryDropdown
           value={selectedCategory}

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { productService } from '@/services/productService';
-import { categoryService } from '../services/categoriesService';
+import { categoryService } from '@/services/categoriesService';
 import { Product, CreateProductRequest } from '@/types/Product';
 
 export const useProducts = () => {
@@ -18,32 +18,23 @@ export const useProducts = () => {
     return 'Ocurrió un error desconocido';
   };
 
-  // 🔹 Obtener el usuario actual del sessionStorage
+  // 🔹 Obtener usuario y configurar token
   useEffect(() => {
-    const currentUser = typeof window !== 'undefined'
-      ? JSON.parse(sessionStorage.getItem('currentUser') || '{}')
-      : null;
+    if (typeof window === 'undefined') return;
 
-    if (currentUser?.id) setUserId(currentUser.id);
+    const stored = localStorage.getItem('currentUser');
+    if (!stored) return;
+
+    const currentUser = JSON.parse(stored);
+    const id = currentUser?.user?.id;
+    const token = currentUser?.token;
+
+    if (id) setUserId(id);
+    if (token) productService.setToken(token);
   }, []);
 
-  // 🔹 Cargar productos por categoría
-  const fetchProductsByCategory = async (categoryId: string) => {
-    setSelectedCategory(categoryId);
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await productService.getProductsByCategory(categoryId);
-      setProducts(data);
-    } catch (err: unknown) {
-      setError(getErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // 🔹 Cargar todos los productos (sin filtrar por usuario)
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -69,6 +60,21 @@ export const useProducts = () => {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // 🔹 Cargar productos por categoría
+  const fetchProductsByCategory = async (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await productService.getProductsByCategory(categoryId);
+      setProducts(data);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 🔹 Crear producto
@@ -83,7 +89,7 @@ export const useProducts = () => {
     try {
       const newProduct = await productService.createProduct({
         ...productData,
-        userId,
+        userId, // <-- ahora sí tiene valor
       });
 
       if (newProduct.categoryId) {
@@ -146,7 +152,7 @@ export const useProducts = () => {
   // 🔹 Ejecutar al cargar
   useEffect(() => {
     fetchProducts();
-  }, [userId]);
+  }, [userId, fetchProducts]);
 
   return {
     products,

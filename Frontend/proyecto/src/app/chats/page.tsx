@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useChats } from "@/hooks/useChats";
 import { useMessages } from "@/hooks/useMessages";
 import { useProducts } from "@/hooks/useProducts";
@@ -14,21 +14,14 @@ export default function ChatPage() {
   const [showProductModal, setShowProductModal] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
 
-  const { chats, createChat, fetchChats } = useChats();
+  const { chats, createChat, fetchChats, currentUserId } = useChats();
   const { messages, fetchMessages, createMessage } = useMessages(selectedChatId);
 
-  const currentUser =
-    typeof window !== "undefined"
-      ? JSON.parse(sessionStorage.getItem("currentUser") || "{}")
-      : null;
-
-  const currentUserId: string | null = currentUser?.id ?? null;
-
-  const selectedChat = chats.find((chat) => chat.id === selectedChatId);
+  const selectedChat = chats.find(chat => chat.id === selectedChatId);
 
   const handleCreateChat = async () => {
-    if (!selectedProductId) {
-      alert("Selecciona un producto para crear el chat");
+    if (!selectedProductId || !currentUserId) {
+      alert("Debes seleccionar un producto e iniciar sesión");
       return;
     }
 
@@ -38,31 +31,20 @@ export default function ChatPage() {
       return;
     }
 
-    if (!currentUserId) {
-      alert("Debes iniciar sesión para crear un chat");
-      return;
-    }
-
     try {
       const newChat = await createChat({
         buyerId: currentUserId,
         sellerId: product.userId,
-        productId: product.id,
+        productId: product.id
       });
 
       await fetchChats();
       setSelectedChatId(newChat.id);
       setShowProductModal(false);
       setSelectedProductId(null);
-    } catch (err: unknown) {
+    } catch (err) {
       console.error(err);
-
-      if (err instanceof Error) {
-        // Solo los objetos de tipo Error tienen .message
-        alert(err.message);
-      } else {
-        alert("No se pudo crear el chat");
-      }
+      alert(err instanceof Error ? err.message : "No se pudo crear el chat");
     }
   };
 
@@ -71,7 +53,7 @@ export default function ChatPage() {
 
   return (
     <div className="flex w-full h-screen">
-      {/* 🧭 Panel izquierdo: lista de chats */}
+      {/* Panel izquierdo: lista de chats */}
       <div className="w-1/3 border-r flex flex-col">
         <div className="flex justify-between items-center p-4 border-b">
           <h2 className="font-semibold">Conversaciones</h2>
@@ -90,7 +72,7 @@ export default function ChatPage() {
         />
       </div>
 
-      {/* 💬 Panel derecho: ventana de chat */}
+      {/* Panel derecho: ventana de chat */}
       {selectedChat && selectedChatId ? (
         <ChatWindow
           chatId={selectedChatId}
@@ -114,20 +96,18 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* 🪟 Modal de selección de producto */}
+      {/* Modal de selección de producto */}
       {showProductModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-lg w-96 p-6">
             <h3 className="text-lg font-semibold mb-4">Selecciona un producto</h3>
-
             <div className="max-h-64 overflow-y-auto border rounded-md mb-4">
               {products
-                .filter((p: Product) => p.userId !== currentUserId)
-                .map((product) => (
+                .filter(p => p.userId !== currentUserId)
+                .map(product => (
                   <div
                     key={product.id}
-                    className={`p-3 cursor-pointer border-b hover:bg-blue-50 ${selectedProductId === product.id ? "bg-blue-100" : ""
-                      }`}
+                    className={`p-3 cursor-pointer border-b hover:bg-blue-50 ${selectedProductId === product.id ? "bg-blue-100" : ""}`}
                     onClick={() => setSelectedProductId(product.id)}
                   >
                     <div className="font-medium text-gray-800">{product.name}</div>

@@ -1,8 +1,6 @@
 using Catalog.Data;
 using Catalog.Repositories;
 using Catalog.Services;
-using MyApi.Repositories;
-using MyApi.Services;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,6 +24,16 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FrontendPolicy", policy =>
+    {
+        policy
+            .AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 var app = builder.Build();
 
@@ -41,7 +49,7 @@ app.MapScalarApiReference(options =>
 
 // Pipeline HTTP
 app.UseHttpsRedirection();
-app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+app.UseCors("FrontendPolicy");
 app.UseAuthorization();
 app.MapControllers();
 

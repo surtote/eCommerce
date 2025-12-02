@@ -4,7 +4,7 @@ using Catalog.Services;
 using Microsoft.AspNetCore.Mvc;
 
 
-namespace MyApi.Controllers
+namespace Catalog.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]

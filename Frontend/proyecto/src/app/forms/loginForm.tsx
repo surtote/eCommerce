@@ -19,7 +19,7 @@ export function LoginForm() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
- 
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
       ...prev,
@@ -33,16 +33,17 @@ export function LoginForm() {
     setError('');
 
     try {
-      const { user, token }  = await login({
+      const { token, user } = await login({
         userName: formData.userName,
         password: formData.password
       });
+
+      // 🔹 Guardar usuario y token en un solo objeto
+      localStorage.setItem('currentUser', JSON.stringify({ user, token }));
+
       console.log('Token JWT:', token);
+      console.log('User ID:', user.id);
 
-      // Guardarlo en localStorage
-      localStorage.setItem('jwtToken', token);
-
-      // Redirigir al dashboard
       router.push('/products');
     } catch (err: unknown) {
       if (err instanceof Error) {

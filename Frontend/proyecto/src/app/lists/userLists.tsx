@@ -6,7 +6,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { User } from "@/types/User";
 
 export const UserList = () => {
-  const { users, loading, error, refetch } = useUsers();
+  const { users, loading, error } = useUsers();
 
   // 🔹 Columnas de la tabla
   const columns: ColumnDef<User>[] = [

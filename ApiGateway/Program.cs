@@ -10,6 +10,15 @@ builder.AddRedisClient("cache");
 
 // CORS for frontend communication
 builder.Services.AddGatewayCors();
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 // JWT authentication (validates tokens from Identity service)
 builder.Services.AddJwtAuthentication(builder.Configuration);
@@ -35,9 +44,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors();
-app.UseRateLimiter();
+
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapReverseProxy();
 
 app.Run();

@@ -2,8 +2,10 @@
 import { User, CreateUserRequest } from '@/types/User';
 
 const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/api/user`;
+const API_URL_AUTH = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth`;
 
 let token: string | null = null; // Token JWT global
+let userId: string | null = null; // 🔹 UserID global (nuevo)
 
 export const userService = {
   // 🔹 Configurar token JWT (después del login)
@@ -11,8 +13,17 @@ export const userService = {
     token = jwt;
   },
 
+  // 🔹 Configurar userId (nuevo)
+  setUserId: (id: string) => {
+    userId = id;
+    console.log("📌 [userService] userId seteado:", userId);
+  },
+
+  // 🔹 Obtener el userId cuando lo necesites
+  getUserId: () => userId,
+
   // 🔹 Obtener todos los usuarios
-   async getUsers(): Promise<User[]> {
+  async getUsers(): Promise<User[]> {
     const res = await fetch(API_URL, {
       headers: {
         'Content-Type': 'application/json',
@@ -44,10 +55,10 @@ export const userService = {
       email: userData.email,
       direccion: userData.direccion || null,
       telefono: userData.telefono || null,
-      password: userData.password, // Nota: primer letra en minúscula para coincidir con backend
+      password: userData.password,
     };
 
-    const res = await fetch(API_URL, {
+    const res = await fetch(`${API_URL_AUTH}/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -66,7 +77,7 @@ export const userService = {
 
   // 🔹 Login
   async login(credentials: { userName: string; password: string }): Promise<{ user: User; token: string }> {
-    const res = await fetch(`${API_URL}/login`, {
+    const res = await fetch(`${API_URL_AUTH}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials),
@@ -78,10 +89,16 @@ export const userService = {
     }
 
     const data = await res.json();
+
+    // Log para ver qué viene del backend
+    console.log("📌 [userService] login -> data:", data);
+    console.log("📌 [userService] login -> user.id recibido:", data?.user?.id);
+
     if (!data.token) throw new Error('No se recibió token del servidor');
 
-    // Guardar token para futuras llamadas
+    // Guardar token y userId igual que token
     userService.setToken(data.token);
+    userService.setUserId(data.user.id);
 
     return { user: data.user, token: data.token };
   },

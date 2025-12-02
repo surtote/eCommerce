@@ -14,7 +14,6 @@ interface ChatWindowProps {
 }
 
 export default function ChatWindow({
-  chatId,
   currentUserId,
   buyerId,
   sellerId,

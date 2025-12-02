@@ -14,7 +14,7 @@ var postgres = builder.AddPostgres("postgres")
 
 var db = postgres.AddDatabase("eCommerce");
 var dbCatalog = postgres.AddDatabase("catalog");
-
+var dbOrders = postgres.AddDatabase("orders");
 // ========== Redis (único y compartido) ==========
 var redis = builder.AddRedis("cache")
     .WithDataVolume("orderflow-redis-data")
@@ -41,6 +41,10 @@ var identityService = builder.AddProject<Projects.Identity>("identity")
 var catalogService = builder.AddProject<Projects.Catalog>("catalog-service")
     .WithReference(dbCatalog)
     .WaitFor(dbCatalog);
+var ordersService = builder.AddProject<Projects.Orders>("orders-service")
+    .WithReference(dbOrders)
+    .WaitFor(dbOrders);
+
 // Notifications Worker - Listens to RabbitMQ events and sends emails
 var notificationsService = builder.AddProject<Projects.Notifications>("notifications")
     .WithReference(rabbitmq)
@@ -60,6 +64,9 @@ var frontend = builder.AddNpmApp("frontend", "../Frontend/proyecto")
     .WithReference(apiGateway)
     .WithHttpEndpoint(env: "DEV", targetPort: 3000)
     .PublishAsDockerFile();
+
+// Ejecutar Aspire
+builder.AddProject<Projects.Worker>("worker");
 
 // Ejecutar Aspire
 builder.Build().Run();

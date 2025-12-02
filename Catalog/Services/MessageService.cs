@@ -4,7 +4,7 @@ using Catalog.Models;
 using Catalog.Repositories;
 using Catalog.Services;
 
-namespace MyApi.Services
+namespace Catalog.Services
 {
     public class MessageService : IMessageService
     {

@@ -5,7 +5,7 @@ using Catalog.Services;
 using Microsoft.AspNetCore.Mvc;
 
 
-namespace MyApi.Controllers
+namespace Catalog.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -141,8 +141,25 @@ namespace MyApi.Controllers
         public async Task<ActionResult<IEnumerable<ProductDto>>> GetByCategory(Guid categoryId)
         {
             var products = await _productService.GetProductsByCategoryAsync(categoryId);
-            return Ok(products);
+
+            var result = products.Select(p => new ProductDto
+            {
+                Id = p.Id,
+                Name = p.Name,
+                Price = p.Price,
+                Description = p.Description,
+                Stock = p.Stock,
+                CreatedAt = p.CreatedAt,
+                UserId = p.UserId,
+                CategoryId = p.CategoryId,
+                CategoryName = p.Category != null ? p.Category.Name : null,
+                ImageData = p.ImageData != null ? Convert.ToBase64String(p.ImageData) : null,
+                ImageContentType = p.ImageContentType
+            });
+
+            return Ok(result);
         }
+
 
         // PUT: api/products/{id}
         [HttpPut("{id}")]

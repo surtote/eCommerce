@@ -1,6 +1,5 @@
 import { Message } from "./Message";
 import { Product } from "./Product";
-import { User } from "./User";
 
 export interface Chat {
   id: string;
@@ -12,4 +11,14 @@ export interface Chat {
   sellerName?: string;
   buyerName?: string;    
   messages?: Message[];   // mensajes asociados
+}
+export interface CreateChatRequest {
+  buyerId: string;
+  sellerId: string;
+  productId: string;
+}
+export interface UpdateChatRequest{
+  buyerId: string;
+  sellerId: string;
+  productId: string;
 }

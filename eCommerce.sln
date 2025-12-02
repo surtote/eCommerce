@@ -11,6 +11,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Elementos de la solución",
 	ProjectSection(SolutionItems) = preProject
 		Directory.Packages.props = Directory.Packages.props
 		docker-compose.yml = docker-compose.yml
+		k6-load-test.js = k6-load-test.js
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceDefaults", "ServiceDefaults\ServiceDefaults.csproj", "{1991DDD0-D35B-4FD0-84D0-4897D405F651}"
@@ -22,6 +23,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Notifications", "Notifications\Notifications.csproj", "{19A7FAA2-4A54-47E5-921C-229D90FAD575}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared", "Shared\Shared.csproj", "{21639791-121B-498E-A202-0203DF2F8B31}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Worker", "Worker\Worker.csproj", "{69C79C25-F84F-479E-3E79-EC68C71F7F70}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orders", "Orders\Orders.csproj", "{DE243C3A-6510-8065-79C6-6359AB8131D1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -57,6 +62,14 @@ Global
 		{21639791-121B-498E-A202-0203DF2F8B31}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{21639791-121B-498E-A202-0203DF2F8B31}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{21639791-121B-498E-A202-0203DF2F8B31}.Release|Any CPU.Build.0 = Release|Any CPU
+		{69C79C25-F84F-479E-3E79-EC68C71F7F70}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{69C79C25-F84F-479E-3E79-EC68C71F7F70}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{69C79C25-F84F-479E-3E79-EC68C71F7F70}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{69C79C25-F84F-479E-3E79-EC68C71F7F70}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DE243C3A-6510-8065-79C6-6359AB8131D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DE243C3A-6510-8065-79C6-6359AB8131D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DE243C3A-6510-8065-79C6-6359AB8131D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DE243C3A-6510-8065-79C6-6359AB8131D1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -26,23 +26,36 @@ export function ProductForm() {
   const [error, setError] = useState('');
   const [userId, setUserId] = useState<string | null>(null);
 
+  // 🔹 Leer currentUser y configurar token
   useEffect(() => {
-    const currentUser =
-      typeof window !== 'undefined'
-        ? JSON.parse(sessionStorage.getItem('currentUser') || '{}')
-        : null;
+    if (typeof window === 'undefined') return;
 
-    if (!currentUser?.id) {
+    const stored = localStorage.getItem('currentUser');
+    if (!stored) {
       setError('Debes iniciar sesión para crear un producto');
-    } else {
-      setUserId(currentUser.id);
+      return;
     }
+
+    const currentUser = JSON.parse(stored);
+    const token = currentUser?.token;
+    const id = currentUser?.user?.id;
+
+    if (!token || !id) {
+      setError('Debes iniciar sesión para crear un producto');
+      return;
+    }
+
+    setUserId(id);
+
+    // Pasar token al servicio
+    import('@/services/productService').then((module) =>
+      module.productService.setToken(token)
+    );
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
 
-    // Si es un input de tipo file
     if (e.target instanceof HTMLInputElement && e.target.type === 'file') {
       const file = e.target.files?.[0] || null;
       setFormData({ ...formData, image: file });
@@ -50,7 +63,6 @@ export function ProductForm() {
       setFormData({ ...formData, [name]: value });
     }
   };
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,8 +83,6 @@ export function ProductForm() {
       return;
     }
 
-    console.log("formData al enviar:", formData);
-
     try {
       await createProduct({
         name: formData.name,
@@ -92,18 +102,12 @@ export function ProductForm() {
         image: null,
         categoryId: undefined,
       });
+
       router.push('/products');
     } catch (err: unknown) {
       console.error(err);
-
-      if (err instanceof Error) {
-        // Solo los objetos de tipo Error tienen .message
-        alert(err.message);
-      } else {
-        alert("No se pudo crear el chat");
-      }
+      setError(err instanceof Error ? err.message : 'No se pudo crear el producto');
     }
-
   };
 
   return (

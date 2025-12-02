@@ -10,16 +10,37 @@ using Shared.Events;
 
 namespace Identity.Services
 {
+    // DTO para devolver usuario en LoginResponse
+    public class LoginUserDto
+    {
+        public string Id { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
+        public string Apellido { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+    }
+
+    public class LoginResponse
+    {
+        public string Token { get; set; } = string.Empty;
+        public LoginUserDto User { get; set; } = default!;
+    }
+
     public class UserService : IUserService
     {
         private readonly IUserRepository _userRepository;
         private readonly PasswordHasher<User> _passwordHasher;
         private readonly UserManager<User> _userManager;
         private readonly ILogger<UserService> _logger;
-        private readonly ITokenService _tokenService; 
+        private readonly ITokenService _tokenService;
         private readonly IPublishEndpoint _publishEndpoint;
 
-        public UserService(IUserRepository userRepository, UserManager<User> userManager, ILogger<UserService> logger, ITokenService tokenService, IPublishEndpoint publishEndpoint)
+        public UserService(
+            IUserRepository userRepository,
+            UserManager<User> userManager,
+            ILogger<UserService> logger,
+            ITokenService tokenService,
+            IPublishEndpoint publishEndpoint)
         {
             _userRepository = userRepository;
             _passwordHasher = new PasswordHasher<User>();
@@ -36,12 +57,11 @@ namespace Identity.Services
 
             return MapToResponse(user);
         }
+
         public async Task<PaginatedResult<UserResponse>> GetUsersAsync(UserQueryParameters parameters)
         {
-            // Start with all users query
             var query = _userManager.Users.AsQueryable();
 
-            // Apply search filter (email or username)
             if (!string.IsNullOrWhiteSpace(parameters.Search))
             {
                 var searchLower = parameters.Search.ToLower();
@@ -50,7 +70,6 @@ namespace Identity.Services
                     (u.UserName != null && u.UserName.ToLower().Contains(searchLower)));
             }
 
-            // Apply role filter if specified
             if (!string.IsNullOrWhiteSpace(parameters.Role))
             {
                 var usersInRole = await _userManager.GetUsersInRoleAsync(parameters.Role);
@@ -58,33 +77,22 @@ namespace Identity.Services
                 query = query.Where(u => userIds.Contains(u.Id));
             }
 
-            // Apply sorting (default to email ascending if no sort specified)
             var sortBy = parameters.SortBy?.ToLower() ?? "email";
             var sortDescending = parameters.SortDescending ?? false;
             query = sortBy switch
             {
-                "username" => sortDescending
-                    ? query.OrderByDescending(u => u.UserName)
-                    : query.OrderBy(u => u.UserName),
-                _ => sortDescending
-                    ? query.OrderByDescending(u => u.Email)
-                    : query.OrderBy(u => u.Email)
+                "username" => sortDescending ? query.OrderByDescending(u => u.UserName) : query.OrderBy(u => u.UserName),
+                _ => sortDescending ? query.OrderByDescending(u => u.Email) : query.OrderBy(u => u.Email)
             };
 
-            // Get total count before pagination
             var totalCount = await query.CountAsync();
 
-            // Apply pagination
-            var pageSize = Math.Min(parameters.PageSize, 100); // Max 100 items
-            var page = Math.Max(parameters.Page, 1); // Min page 1
+            var pageSize = Math.Min(parameters.PageSize, 100);
+            var page = Math.Max(parameters.Page, 1);
             var skip = (page - 1) * pageSize;
 
-            var users = await query
-                .Skip(skip)
-                .Take(pageSize)
-                .ToListAsync();
+            var users = await query.Skip(skip).Take(pageSize).ToListAsync();
 
-            // Map to response DTOs
             var userResponses = new List<UserResponse>();
             foreach (var user in users)
             {
@@ -104,139 +112,84 @@ namespace Identity.Services
 
             return PaginatedResult<UserResponse>.Create(userResponses, page, pageSize, totalCount);
         }
+
         public async Task<ServiceResult> LockUserAsync(string userId, DateTimeOffset? lockoutEnd)
         {
             var user = await _userManager.FindByIdAsync(userId);
-            if (user is null)
-            {
-                return ServiceResult.Failure("User not found");
-            }
+            if (user is null) return ServiceResult.Failure("User not found");
 
-            // If no lockout end specified, lock for 100 years (effectively permanent)
             var lockEnd = lockoutEnd ?? DateTimeOffset.UtcNow.AddYears(100);
-
             var lockResult = await _userManager.SetLockoutEndDateAsync(user, lockEnd);
+
             if (!lockResult.Succeeded)
-            {
-                var errors = lockResult.Errors.Select(e => e.Description);
-                return ServiceResult.Failure(errors);
-            }
+                return ServiceResult.Failure(lockResult.Errors.Select(e => e.Description));
 
-            _logger.LogInformation("User locked successfully: {UserId} until {LockoutEnd}",
-                userId, lockEnd);
-
+            _logger.LogInformation("User locked successfully: {UserId} until {LockoutEnd}", userId, lockEnd);
             return ServiceResult.Success("User account locked successfully");
         }
 
-        /// <summary>
-        /// Unlock user account
-        /// </summary>
         public async Task<ServiceResult> UnlockUserAsync(string userId)
         {
             var user = await _userManager.FindByIdAsync(userId);
-            if (user is null)
-            {
-                return ServiceResult.Failure("User not found");
-            }
+            if (user is null) return ServiceResult.Failure("User not found");
 
-            // Clear lockout
             var unlockResult = await _userManager.SetLockoutEndDateAsync(user, null);
             if (!unlockResult.Succeeded)
-            {
-                var errors = unlockResult.Errors.Select(e => e.Description);
-                return ServiceResult.Failure(errors);
-            }
+                return ServiceResult.Failure(unlockResult.Errors.Select(e => e.Description));
 
-            // Reset access failed count
             var resetResult = await _userManager.ResetAccessFailedCountAsync(user);
             if (!resetResult.Succeeded)
-            {
                 _logger.LogWarning("Failed to reset access failed count for user {UserId}", userId);
-            }
 
             _logger.LogInformation("User unlocked successfully: {UserId}", userId);
-
             return ServiceResult.Success("User account unlocked successfully");
         }
 
-        /// <summary>
-        /// Get current user's full profile
-        /// </summary>
         public async Task<ServiceResult<IEnumerable<string>>> GetUserRolesAsync(string userId)
         {
             var user = await _userManager.FindByIdAsync(userId);
-            if (user is null)
-            {
-                return ServiceResult<IEnumerable<string>>.Failure("User not found");
-            }
+            if (user is null) return ServiceResult<IEnumerable<string>>.Failure("User not found");
 
             var roles = await _userManager.GetRolesAsync(user);
-
             return ServiceResult<IEnumerable<string>>.Success(roles);
         }
+
         public async Task<ServiceResult> AddUserToRoleAsync(string userId, string roleName)
         {
             var user = await _userManager.FindByIdAsync(userId);
-            if (user is null)
-            {
-                return ServiceResult.Failure("User not found");
-            }
+            if (user is null) return ServiceResult.Failure("User not found");
 
-            // Check if role exists
-            var roleExists = await _userManager.GetRolesAsync(user);
-            if (roleExists.Contains(roleName))
-            {
-                return ServiceResult.Failure("User already has this role");
-            }
+            var roles = await _userManager.GetRolesAsync(user);
+            if (roles.Contains(roleName)) return ServiceResult.Failure("User already has this role");
 
             var addResult = await _userManager.AddToRoleAsync(user, roleName);
             if (!addResult.Succeeded)
-            {
-                var errors = addResult.Errors.Select(e => e.Description);
-                return ServiceResult.Failure(errors);
-            }
+                return ServiceResult.Failure(addResult.Errors.Select(e => e.Description));
 
             _logger.LogInformation("Role {Role} assigned to user {UserId}", roleName, userId);
-
             return ServiceResult.Success($"Role '{roleName}' assigned successfully");
         }
 
-        /// <summary>
-        /// Remove role from user
-        /// </summary>
         public async Task<ServiceResult> RemoveUserFromRoleAsync(string userId, string roleName)
         {
             var user = await _userManager.FindByIdAsync(userId);
-            if (user is null)
-            {
-                return ServiceResult.Failure("User not found");
-            }
+            if (user is null) return ServiceResult.Failure("User not found");
 
-            // Check if user has the role
             var hasRole = await _userManager.IsInRoleAsync(user, roleName);
-            if (!hasRole)
-            {
-                return ServiceResult.Failure("User does not have this role");
-            }
+            if (!hasRole) return ServiceResult.Failure("User does not have this role");
 
-            // Prevent removing last role
             var userRoles = await _userManager.GetRolesAsync(user);
             if (userRoles.Count <= 1)
-            {
                 return ServiceResult.Failure("Cannot remove the last role from user. Users must have at least one role.");
-            }
 
             var removeResult = await _userManager.RemoveFromRoleAsync(user, roleName);
             if (!removeResult.Succeeded)
-            {
-                var errors = removeResult.Errors.Select(e => e.Description);
-                return ServiceResult.Failure(errors);
-            }
+                return ServiceResult.Failure(removeResult.Errors.Select(e => e.Description));
 
             _logger.LogInformation("Role {Role} removed from user {UserId}", roleName, userId);
-
             return ServiceResult.Success($"Role '{roleName}' removed successfully");
         }
+
         public async Task<IEnumerable<UserResponse>> GetAllUsersAsync()
         {
             var users = await _userRepository.GetAllAsync();
@@ -256,10 +209,8 @@ namespace Identity.Services
                 Telefono = request.Telefono
             };
 
-            // Crear usuario primero
             var createdUser = await _userRepository.CreateAsync(user, request.Password);
 
-            // Publicar evento después
             await _publishEndpoint.Publish(new UserRegisteredEvent(
                 UserId: createdUser.Id,
                 Email: createdUser.Email!,
@@ -275,23 +226,22 @@ namespace Identity.Services
             var user = await _userManager.FindByNameAsync(usernameOrEmail)
                        ?? await _userManager.FindByEmailAsync(usernameOrEmail);
 
-            if (user == null)
-                return null;
+            if (user == null) return null;
 
             var isValid = await _userManager.CheckPasswordAsync(user, password);
-            if (!isValid)
-                return null;
+            if (!isValid) return null;
 
             var roles = await _userManager.GetRolesAsync(user);
-
-            var userResponse = new LoginRequest
-            {
-                UserName = user.UserName!,
-                Password = user.PasswordHash!
-            };
-
-            // ✅ Usar TokenService inyectado en lugar de parámetro
             var token = await _tokenService.GenerateJwtToken(user, roles);
+
+            var userResponse = new LoginUserDto
+            {
+                Id = user.Id,
+                UserName = user.UserName!,
+                Nombre = user.Nombre,
+                Apellido = user.Apellido,
+                Email = user.Email!
+            };
 
             return new LoginResponse
             {
@@ -299,7 +249,6 @@ namespace Identity.Services
                 User = userResponse
             };
         }
-
 
         public async Task<UserResponse?> UpdateUserAsync(string id, UpdateUserRequest request)
         {
@@ -342,16 +291,5 @@ namespace Identity.Services
                 Direccion = user.Direccion
             };
         }
-    }
-    public class LoginResponse
-    {
-        public string Token { get; set; } = string.Empty;
-        public LoginRequest User { get; set; } = default!;
-    }
-     public class LoginRequest
-    {
-        public string UserName { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
     }
 }

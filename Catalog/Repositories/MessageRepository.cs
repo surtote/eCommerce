@@ -4,7 +4,7 @@ using Catalog.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 
-namespace MyApi.Repositories
+namespace Catalog.Repositories
 {
     public class MessageRepository : IMessageRepository
     {

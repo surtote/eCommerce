@@ -10,6 +10,7 @@ export interface User {
   passwordHash: string; // Ahora sabemos que existe
   createdAt: string;
   updatedAt?: string;
+  token: string;
 }
 
 export interface CreateUserRequest {
