@@ -11,6 +11,7 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy all referenced project files so restore works correctly
+COPY ["Directory.Packages.props", "."]
 COPY ["Identity/Identity.csproj", "Identity/"]
 COPY ["Shared/Shared.csproj", "Shared/"]
 COPY ["ServiceDefaults/ServiceDefaults.csproj", "ServiceDefaults/"]
