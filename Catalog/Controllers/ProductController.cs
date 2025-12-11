@@ -1,9 +1,7 @@
-﻿
-using Catalog.DTO;
+﻿using Catalog.DTO;
 using Catalog.Models;
 using Catalog.Services;
 using Microsoft.AspNetCore.Mvc;
-
 
 namespace Catalog.Controllers
 {
@@ -69,7 +67,7 @@ namespace Catalog.Controllers
 
         // GET: api/products/user/{userId}
         [HttpGet("user/{userId}")]
-        public async Task<ActionResult<IEnumerable<ProductDto>>> GetByUserId(Guid userId)
+        public async Task<ActionResult<IEnumerable<ProductDto>>> GetByUserId(string userId)
         {
             var products = await _productService.GetProductsByUserIdAsync(userId);
 
@@ -137,6 +135,7 @@ namespace Catalog.Controllers
 
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
+
         [HttpGet("category/{categoryId}")]
         public async Task<ActionResult<IEnumerable<ProductDto>>> GetByCategory(Guid categoryId)
         {
@@ -159,7 +158,6 @@ namespace Catalog.Controllers
 
             return Ok(result);
         }
-
 
         // PUT: api/products/{id}
         [HttpPut("{id}")]
@@ -194,6 +192,63 @@ namespace Catalog.Controllers
             return Ok(result);
         }
 
+        // PUT: api/products/{id}/stock - Actualizar stock desde Orders
+        [HttpPut("{id}/stock")]
+        public async Task<ActionResult<ProductDto>> UpdateStock(Guid id, [FromBody] UpdateStockRequest request)
+        {
+            try
+            {
+                var updated = await _productService.UpdateStockAsync(id, request.Stock);
+
+                var result = new ProductDto
+                {
+                    Id = updated.Id,
+                    Name = updated.Name,
+                    Price = updated.Price,
+                    Description = updated.Description,
+                    Stock = updated.Stock,
+                    CreatedAt = updated.CreatedAt,
+                    UserId = updated.UserId,
+                    CategoryId = updated.CategoryId,
+                    CategoryName = updated.Category != null ? updated.Category.Name : null,
+                    ImageData = updated.ImageData != null ? System.Convert.ToBase64String(updated.ImageData) : null,
+                    ImageContentType = updated.ImageContentType
+                };
+
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // POST: api/products/confirm-reservation - Confirmar reserva de stock
+        [HttpPost("confirm-reservation")]
+        public async Task<ActionResult> ConfirmStockReservation([FromBody] ConfirmReservationRequest request)
+        {
+            try
+            {
+                if (request?.Items == null || !request.Items.Any())
+                    return BadRequest(new { message = "No items to confirm" });
+
+                var confirmed = await _productService.ConfirmStockReservationAsync(request.OrderId, request.Items);
+
+                if (!confirmed)
+                    return BadRequest(new { message = "Failed to confirm stock reservation" });
+
+                return Ok(new { message = "Stock reservation confirmed successfully" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = $"Error: {ex.Message}" });
+            }
+        }
+
         // DELETE: api/products/{id}
         [HttpDelete("{id}")]
         public async Task<ActionResult> Delete(Guid id)
@@ -219,8 +274,7 @@ namespace Catalog.Controllers
             var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "id");
             if (userIdClaim == null) return Unauthorized();
 
-            if (!Guid.TryParse(userIdClaim.Value, out Guid userId))
-                return BadRequest("El identificador de usuario no es válido.");
+            var userId = userIdClaim.Value;
 
             var products = await _productService.GetProductsByUserIdAsync(userId);
 
@@ -234,13 +288,25 @@ namespace Catalog.Controllers
                 CreatedAt = p.CreatedAt,
                 UserId = p.UserId,
                 CategoryId = p.CategoryId,
-                CategoryName = p.Category != null ? p.Category.Name : null,
+                CategoryName = p.Category?.Name,
                 ImageData = p.ImageData != null ? Convert.ToBase64String(p.ImageData) : null,
                 ImageContentType = p.ImageContentType
             });
 
             return Ok(result);
         }
+    }
 
+    // DTOs para stock management
+    public class UpdateStockRequest
+    {
+        public int Stock { get; set; }
+        public bool IsReserved { get; set; }
+    }
+
+    public class ConfirmReservationRequest
+    {
+        public Guid OrderId { get; set; }
+        public List<ReservationItem> Items { get; set; }
     }
 }

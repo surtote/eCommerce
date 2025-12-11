@@ -2,8 +2,20 @@
 
 namespace Orders.DTOs
 {
-    public class OrdersDTO
+    public static class OrdersDTO
     {
+        public record CreateOrderRequest(
+            string ShippingAddress,
+            string? Notes,
+            List<OrderItemRequest> Items);
+
+        public record OrderItemRequest(
+            Guid ProductId,
+            int Quantity);
+
+        public record UpdateOrderStatusRequest(
+            OrderStatus Status);
+
         public record OrderResponse(
             Guid Id,
             string UserId,
@@ -15,13 +27,6 @@ namespace Orders.DTOs
             DateTime? UpdatedAt,
             IEnumerable<OrderItemResponse> Items);
 
-        public record OrderListResponse(
-            Guid Id,
-            string Status,
-            decimal TotalAmount,
-            int ItemCount,
-            DateTime CreatedAt);
-
         public record OrderItemResponse(
             Guid Id,
             Guid ProductId,
@@ -30,15 +35,11 @@ namespace Orders.DTOs
             int Quantity,
             decimal Subtotal);
 
-        public record CreateOrderRequest(
-            string? ShippingAddress,
-            string? Notes,
-            IEnumerable<CreateOrderItemRequest> Items);
-
-        public record CreateOrderItemRequest(
-            Guid ProductId,
-            int Quantity);
-
-        public record UpdateOrderStatusRequest(OrderStatus Status);
+        public record OrderListResponse(
+            Guid Id,
+            string Status,
+            decimal TotalAmount,
+            int ItemCount,
+            DateTime CreatedAt);
     }
 }

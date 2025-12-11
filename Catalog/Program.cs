@@ -2,6 +2,7 @@ using Catalog.Data;
 using Catalog.Repositories;
 using Catalog.Services;
 using Scalar.AspNetCore;
+using Shared.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,7 +11,8 @@ builder.AddServiceDefaults();
 
 // DbContext
 builder.AddNpgsqlDbContext<ApplicationDbContext>("catalog");
-
+// JWT Authentication
+builder.Services.AddJwtAuthentication(builder.Configuration);
 // Repositorios y servicios
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IChatRepository, ChatRepository>();
@@ -20,6 +22,8 @@ builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<IMessageService, MessageService>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Configuration.AddUserSecrets<Program>();
+
 // Controladores y OpenAPI
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

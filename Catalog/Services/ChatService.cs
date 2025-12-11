@@ -1,6 +1,4 @@
-﻿
-
-using Catalog.Models;
+﻿using Catalog.Models;
 using Catalog.Repositories;
 
 namespace Catalog.Services

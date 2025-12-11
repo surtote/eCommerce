@@ -24,7 +24,7 @@ namespace Catalog.Repositories
             return await _context.Products.FirstOrDefaultAsync(p => p.Id == id);
         }
 
-        public async Task<IEnumerable<Product>> GetByUserIdAsync(Guid userId)
+        public async Task<IEnumerable<Product>> GetByUserIdAsync(string userId)
         {
             return await _context.Products
                                  .Where(p => p.UserId == userId.ToString())

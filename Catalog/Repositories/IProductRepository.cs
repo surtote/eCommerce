@@ -6,11 +6,11 @@ namespace Catalog.Repositories
 {
     public interface IProductRepository
     {
-        Task<IEnumerable<Product>> GetAllAsync();               // Todos los productos
-        Task<Product> GetByIdAsync(Guid id);                     // Producto por Id
-        Task<IEnumerable<Product>> GetByUserIdAsync(Guid userId); // Productos de un usuario
-        Task<Product> AddAsync(Product product);               // Crear producto
-        Task<Product> UpdateAsync(Product product);            // Actualizar producto
+        Task<IEnumerable<Product>> GetAllAsync();               
+        Task<Product> GetByIdAsync(Guid id);                    
+        Task<IEnumerable<Product>> GetByUserIdAsync(string userId); 
+        Task<Product> AddAsync(Product product);        
+        Task<Product> UpdateAsync(Product product);       
         Task<IEnumerable<Product>> GetByCategoryIdAsync(Guid categoryId);
         Task<bool> DeleteAsync(Guid id);
 

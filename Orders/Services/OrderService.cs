@@ -1,18 +1,15 @@
 ﻿using Identity.Services.Common;
-using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Orders.Data;
 using Orders.Models;
-using Shared.Events;
 using static Orders.DTOs.OrdersDTO;
 
-namespace OrderFlow.Orders.Services;
+namespace Orders.Services;
 
 public class OrderService(
     ApplicationDbContext db,
     IHttpClientFactory httpClientFactory,
-    IPublishEndpoint publishEndpoint,
-    ILogger<OrderService> logger) : IOrderService
+    ILogger<OrderService> logger) : Orders.Services.IOrderService
 {
     public async Task<ServiceResult<IEnumerable<OrderListResponse>>> GetUserOrdersAsync(string userId)
     {
@@ -48,12 +45,14 @@ public class OrderService(
 
         var catalogClient = httpClientFactory.CreateClient("catalog");
         var orderItems = new List<OrderProduct>();
-        var reservedItems = new List<(Guid ProductId, int Quantity)>(); // <-- Guid
+        var reservedItems = new List<(Guid ProductId, int Quantity)>();
 
+        // 1. Verificar disponibilidad y reservar stock
         foreach (var item in request.Items)
         {
             try
             {
+                // Obtener información del producto
                 var response = await catalogClient.GetAsync($"/api/products/{item.ProductId}");
                 if (!response.IsSuccessStatusCode)
                 {
@@ -68,31 +67,49 @@ public class OrderService(
                     return ServiceResult<OrderResponse>.Failure($"Could not fetch product {item.ProductId}");
                 }
 
-                if (!product.IsActive)
+                // Verificar si el producto está activo (asumiendo que stock null o 0 significa no disponible)
+                if (product.Stock == null || product.Stock <= 0)
                 {
                     await ReleaseReservedStockAsync(catalogClient, reservedItems);
-                    return ServiceResult<OrderResponse>.Failure($"Product {product.Name} is not available");
+                    return ServiceResult<OrderResponse>.Failure($"Product {product.Name} is out of stock");
                 }
 
-                var reserveResponse = await catalogClient.PostAsJsonAsync(
-                    $"/api/products/{item.ProductId}/reserve",
-                    new { Quantity = item.Quantity });
-
-                if (!reserveResponse.IsSuccessStatusCode)
+                if (product.Stock < item.Quantity)
                 {
                     await ReleaseReservedStockAsync(catalogClient, reservedItems);
-                    var error = await reserveResponse.Content.ReadAsStringAsync();
+                    return ServiceResult<OrderResponse>.Failure($"Insufficient stock for {product.Name}. Available: {product.Stock}, Requested: {item.Quantity}");
+                }
+
+                // Actualizar stock - reservar restando la cantidad
+                var updateStockRequest = new
+                {
+                    Stock = product.Stock - item.Quantity,
+                    IsReserved = true
+                };
+
+                var updateResponse = await catalogClient.PutAsJsonAsync(
+                    $"/api/products/{item.ProductId}/stock",
+                    updateStockRequest);
+
+                if (!updateResponse.IsSuccessStatusCode)
+                {
+                    await ReleaseReservedStockAsync(catalogClient, reservedItems);
+                    var error = await updateResponse.Content.ReadAsStringAsync();
+
+                    // Agregar más logging
+                    logger.LogError(
+                        "Failed to update stock. Status: {StatusCode}, Response: {Response}",
+                        updateResponse.StatusCode,
+                        error);
+
                     return ServiceResult<OrderResponse>.Failure(
-                        reserveResponse.StatusCode == System.Net.HttpStatusCode.Conflict
-                            ? $"Insufficient stock for {product.Name}"
-                            : $"Failed to reserve stock for {product.Name}: {error}");
+                        $"Failed to reserve stock for {product.Name}: {error}");
                 }
-
                 reservedItems.Add((item.ProductId, item.Quantity));
 
                 orderItems.Add(new OrderProduct
                 {
-                    ProductId = item.ProductId, // <-- Guid
+                    ProductId = item.ProductId,
                     ProductName = product.Name,
                     UnitPrice = product.Price,
                     Quantity = item.Quantity
@@ -104,8 +121,15 @@ public class OrderService(
                 await ReleaseReservedStockAsync(catalogClient, reservedItems);
                 return ServiceResult<OrderResponse>.Failure("Catalog service unavailable");
             }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Unexpected error processing product {ProductId}", item.ProductId);
+                await ReleaseReservedStockAsync(catalogClient, reservedItems);
+                return ServiceResult<OrderResponse>.Failure($"Error processing product {item.ProductId}");
+            }
         }
 
+        // 2. Crear la orden en la base de datos
         var order = new Order
         {
             UserId = userId,
@@ -116,19 +140,61 @@ public class OrderService(
             Status = OrderStatus.Pending
         };
 
-        db.Orders.Add(order);
-        await db.SaveChangesAsync();
+        try
+        {
+            db.Orders.Add(order);
+            await db.SaveChangesAsync();
 
-        logger.LogInformation("Order created: {OrderId} for user {UserId}", order.Id, userId);
+            logger.LogInformation("Order created: {OrderId} for user {UserId}", order.Id, userId);
 
-        var orderCreatedEvent = new OrderCreatedEvent(
-            order.Id,
-            userId,
-            orderItems.Select(i => new OrderItemEvent(i.ProductId, i.ProductName, i.Quantity)));
+            // 3. Confirmar la reserva en el catálogo
+            await ConfirmStockReservationAsync(catalogClient, order, reservedItems);
 
-        await publishEndpoint.Publish(orderCreatedEvent);
+            // 4. Actualizar el estado de la orden a confirmada
+            order.Status = OrderStatus.Confirmed;
+            order.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
 
-        return ServiceResult<OrderResponse>.Success(MapToResponse(order), "Order created successfully");
+            return ServiceResult<OrderResponse>.Success(MapToResponse(order), "Order created successfully");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to create order in database");
+
+            // Si falla la creación de la orden, liberar el stock reservado
+            await ReleaseReservedStockAsync(catalogClient, reservedItems);
+
+            return ServiceResult<OrderResponse>.Failure("Failed to create order. Please try again.");
+        }
+    }
+
+    private async Task ConfirmStockReservationAsync(HttpClient catalogClient, Order order, List<(Guid ProductId, int Quantity)> reservedItems)
+    {
+        try
+        {
+            // Aquí podrías marcar el stock como definitivamente vendido en lugar de solo reservado
+            var confirmResponse = await catalogClient.PostAsJsonAsync(
+                "/api/products/confirm-reservation",
+                new
+                {
+                    OrderId = order.Id,
+                    Items = reservedItems.Select(item => new
+                    {
+                        ProductId = item.ProductId,
+                        ReservedQuantity = item.Quantity
+                    })
+                });
+
+            if (!confirmResponse.IsSuccessStatusCode)
+            {
+                logger.LogWarning("Failed to confirm stock reservation for order {OrderId}", order.Id);
+                // Aquí podrías implementar lógica de reintento o compensación
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error confirming stock reservation for order {OrderId}", order.Id);
+        }
     }
 
     private async Task ReleaseReservedStockAsync(HttpClient catalogClient, List<(Guid ProductId, int Quantity)> reservedItems)
@@ -137,9 +203,26 @@ public class OrderService(
         {
             try
             {
-                await catalogClient.PostAsJsonAsync(
-                    $"/api/v1/products/{productId}/release",
-                    new { Quantity = quantity });
+                // Primero obtener el stock actual
+                var productResponse = await catalogClient.GetAsync($"/api/products/{productId}");
+                if (productResponse.IsSuccessStatusCode)
+                {
+                    var product = await productResponse.Content.ReadFromJsonAsync<ProductInfo>();
+                    if (product != null)
+                    {
+                        // Liberar stock sumando la cantidad reservada
+                        var releaseStockRequest = new
+                        {
+                            Stock = (product.Stock ?? 0) + quantity
+                        };
+
+                        await catalogClient.PutAsJsonAsync(
+                            $"/api/products/{productId}/stock",
+                            releaseStockRequest);
+
+                        logger.LogInformation("Released {Quantity} units of product {ProductId}", quantity, productId);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -164,34 +247,24 @@ public class OrderService(
             return ServiceResult.Failure("Order cannot be cancelled at this stage");
 
         var catalogClient = httpClientFactory.CreateClient("catalog");
-        foreach (var item in order.OrderProducts)
-        {
-            try
-            {
-                await catalogClient.PostAsJsonAsync(
-                    $"/api/v1/products/{item.ProductId}/release",
-                    new { Quantity = item.Quantity });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error releasing stock for product {ProductId} on order {OrderId}", item.ProductId, id);
-            }
-        }
+        var itemsToRelease = order.OrderProducts
+            .Select(op => (op.ProductId, op.Quantity))
+            .ToList();
 
+        // Liberar el stock en el catálogo
+        await ReleaseReservedStockAsync(catalogClient, itemsToRelease);
+
+        // Actualizar el estado de la orden
         order.Status = OrderStatus.Cancelled;
         order.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
 
-        var orderCancelledEvent = new OrderCancelledEvent(
-            order.Id,
-            userId,
-            order.OrderProducts.Select(i => new OrderItemEvent(i.ProductId, i.ProductName, i.Quantity)));
-
-        await publishEndpoint.Publish(orderCancelledEvent);
+        logger.LogInformation("Order {OrderId} cancelled by user {UserId}", id, userId);
 
         return ServiceResult.Success("Order cancelled successfully");
     }
+
     public async Task<ServiceResult<IEnumerable<OrderListResponse>>> GetAllAsync(OrderStatus? status, string? userId)
     {
         var query = db.Orders.AsQueryable();
@@ -225,7 +298,7 @@ public class OrderService(
         return ServiceResult<OrderResponse>.Success(MapToResponse(order));
     }
 
-    public async Task<ServiceResult> UpdateStatusAsync(int id, OrderStatus newStatus)
+    public async Task<ServiceResult> UpdateStatusAsync(Guid id, OrderStatus newStatus)
     {
         var order = await db.Orders.FindAsync(id);
         if (order is null)
@@ -274,5 +347,17 @@ public class OrderService(
         order.OrderProducts.Select(i => new OrderItemResponse(
             i.Id, i.ProductId, i.ProductName, i.UnitPrice, i.Quantity, i.Subtotal)));
 
-    private record ProductInfo(int Id, string Name, decimal Price, int Stock, bool IsActive);
+    // Modelo que coincide con tu Product de catálogo
+    private class ProductInfo
+    {
+        public Guid Id { get; set; }
+        public string? Name { get; set; }
+        public decimal Price { get; set; }
+        public string? Description { get; set; }
+        public int? Stock { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public string? ImageContentType { get; set; }
+        public string UserId { get; set; } = string.Empty;
+        public Guid? CategoryId { get; set; }
+    }
 }

@@ -15,6 +15,29 @@ namespace Microsoft.Extensions.Hosting;
 // To learn more about using this project, see https://aka.ms/dotnet/aspire/service-defaults
 public static class Extensions
 {
+    public class ServiceResult
+    {
+        public bool Succeeded { get; set; }
+        public string? Message { get; set; }
+
+
+        public static ServiceResult Success(string? message = null) =>
+            new ServiceResult { Succeeded = true, Message = message };
+
+        public static ServiceResult Failure(string message) =>
+            new ServiceResult { Succeeded = false, Message = message };
+    }
+
+    public class ServiceResult<T> : ServiceResult
+    {
+        public T? Data { get; set; }
+
+        public static ServiceResult<T> Success(T data, string? message = null) =>
+            new ServiceResult<T> { Succeeded = true, Data = data, Message = message };
+
+        public static new ServiceResult<T> Failure(string message) =>
+            new ServiceResult<T> { Succeeded = false, Message = message };
+    }
     public static IHostApplicationBuilder AddServiceDefaults(this IHostApplicationBuilder builder)
     {
         builder.ConfigureOpenTelemetry();

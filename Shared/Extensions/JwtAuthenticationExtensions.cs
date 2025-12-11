@@ -13,25 +13,24 @@ namespace Shared.Extensions;
 /// </summary>
 public static class JwtAuthenticationExtensions
 {
-    /// <summary>
-    /// Adds JWT Bearer authentication with standard configuration.
-    /// Requires Jwt:Secret, Jwt:Issuer, and Jwt:Audience in configuration.
-    /// </summary>
-    /// <param name="services">Service collection</param>
-    /// <param name="configuration">Configuration containing JWT settings</param>
-    /// <param name="configureEvents">Optional action to configure JWT Bearer events</param>
+
     public static IServiceCollection AddJwtAuthentication(
         this IServiceCollection services,
         IConfiguration configuration,
         Action<JwtBearerEvents>? configureEvents = null)
     {
-        // Use fallback values for build-time/design-time scenarios
-        var jwtSecret = configuration["Jwt:Secret"]
-            ?? "build-time-secret-key-minimum-32-characters-required-for-hmac-sha256";
-        var jwtIssuer = configuration["Jwt:Issuer"]
-            ?? "build-time-issuer";
-        var jwtAudience = configuration["Jwt:Audience"]
-            ?? "build-time-audience";
+        // Get JWT configuration - same keys as GenerateJwtToken uses
+        var jwtKey = configuration["Jwt:Key"];
+        var jwtIssuer = configuration["Jwt:Issuer"];
+        var jwtAudience = configuration["Jwt:Audience"];
+
+        // Validate that required settings are configured
+        if (string.IsNullOrEmpty(jwtKey))
+            throw new InvalidOperationException("Jwt:Key is not configured. Set it via user secrets or appsettings.json");
+        if (string.IsNullOrEmpty(jwtIssuer))
+            throw new InvalidOperationException("Jwt:Issuer is not configured");
+        if (string.IsNullOrEmpty(jwtAudience))
+            throw new InvalidOperationException("Jwt:Audience is not configured");
 
         services.AddAuthentication(options =>
         {
@@ -48,7 +47,7 @@ public static class JwtAuthenticationExtensions
                 ValidateIssuerSigningKey = true,
                 ValidIssuer = jwtIssuer,
                 ValidAudience = jwtAudience,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
                 ClockSkew = TimeSpan.Zero, // Remove default 5 minute tolerance
                 NameClaimType = ClaimTypes.Name,
                 RoleClaimType = ClaimTypes.Role
@@ -63,7 +62,6 @@ public static class JwtAuthenticationExtensions
         });
 
         services.AddAuthorization();
-
         return services;
     }
 }

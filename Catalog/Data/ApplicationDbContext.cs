@@ -6,7 +6,7 @@ namespace Catalog.Data
     public class ApplicationDbContext : DbContext
     {
         public DbSet<Product> Products { get; set; }
-        public DbSet<Category> Categories { get; set; }
+        public virtual DbSet<Category> Categories { get; set; }
         public DbSet<Chat> Chats { get; set; }
         public DbSet<Message> Messages { get; set; }
 

@@ -43,6 +43,8 @@ var catalogService = builder.AddProject<Projects.Catalog>("catalog-service")
     .WaitFor(dbCatalog);
 var ordersService = builder.AddProject<Projects.Orders>("orders-service")
     .WithReference(dbOrders)
+    .WithReference(catalogService)
+    .WaitFor(catalogService)
     .WaitFor(dbOrders);
 
 // Notifications Worker - Listens to RabbitMQ events and sends emails
@@ -56,8 +58,10 @@ var apiGateway = builder.AddProject<Projects.ApiGateway>("apigateway")
     .WithReference(redis)
     .WithReference(identityService)
     .WithReference(catalogService)
+    .WithReference(ordersService)
     .WaitFor(identityService)
-    .WaitFor(catalogService);
+    .WaitFor(catalogService)
+    .WaitFor(ordersService);
 
 // ========== Frontend ==========
 var frontend = builder.AddNpmApp("frontend", "../Frontend/proyecto")
