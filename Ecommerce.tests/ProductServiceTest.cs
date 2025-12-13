@@ -1,6 +1,7 @@
 ﻿using Catalog.Models;
 using Catalog.Repositories;
 using Catalog.Services;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 using System;
@@ -14,12 +15,13 @@ namespace Ecommerce.Tests
     {
         private Mock<IProductRepository> _repositoryMock = null!;
         private ProductService _service = null!;
-
+        private Mock<ILogger<ProductService>> _loggerMock = null!;
         [SetUp]
         public void Setup()
         {
             _repositoryMock = new Mock<IProductRepository>();
-            _service = new ProductService(_repositoryMock.Object);
+            _loggerMock = new Mock<ILogger<ProductService>>();
+            _service = new ProductService(_repositoryMock.Object, _loggerMock.Object);
         }
 
         [Test]
