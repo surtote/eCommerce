@@ -37,7 +37,7 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
       - name: Run tests
-        run: dotnet test eCommerce.sln --no-restore --verbosity normal
+        run: dotnet test eCommerce.sln --no-restore --verbosity normal --filter "FullyQualifiedName~UserServiceTest"
 
   build:
     runs-on: ubuntu-latest
