@@ -37,7 +37,7 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
       - name: Run tests
-        run: dotnet test eCommerce.tests --no-restore --verbosity normal
+        run: dotnet test eCommerce.tests/eCommerce.tests.csproj --no-restore --verbosity normal
 
   build:
     runs-on: ubuntu-latest
