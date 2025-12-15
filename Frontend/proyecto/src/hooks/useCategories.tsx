@@ -7,13 +7,11 @@ export function useCategories() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Helper para extraer mensaje de error
   const getErrorMessage = (err: unknown) => {
     if (err instanceof Error) return err.message;
     return "Ocurrió un error desconocido";
   };
 
-  // Obtener todas las categorías
   const fetchCategories = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -27,7 +25,6 @@ export function useCategories() {
     }
   }, []);
 
-  // Crear categoría
   const createCategory = useCallback(async (name: string) => {
     setLoading(true);
     setError(null);
@@ -44,7 +41,6 @@ export function useCategories() {
     }
   }, []);
 
-  // Eliminar categoría
   const deleteCategory = useCallback(async (id: string) => {
     setLoading(true);
     setError(null);

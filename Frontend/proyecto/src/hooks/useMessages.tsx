@@ -11,7 +11,6 @@ export const useMessages = (chatId: string | null) => {
   const getErrorMessage = (err: unknown): string =>
     err instanceof Error ? err.message : 'Ocurrió un error desconocido';
 
-  // 🔹 Configurar token desde localStorage al iniciar
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const stored = localStorage.getItem('currentUser');

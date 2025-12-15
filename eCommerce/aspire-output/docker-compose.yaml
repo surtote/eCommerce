@@ -1,0 +1,240 @@
+services:
+  ecommerce-dev-dashboard:
+    image: "mcr.microsoft.com/dotnet/nightly/aspire-dashboard:latest"
+    expose:
+      - "18888"
+      - "18889"
+    networks:
+      - "aspire"
+    restart: "always"
+  postgres:
+    image: "docker.io/library/postgres:17.6"
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: "scram-sha-256"
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+    expose:
+      - "5432"
+    volumes:
+      - type: "volume"
+        target: "/var/lib/postgresql/data"
+        source: "ecommerce_postgres_data"
+        read_only: false
+    networks:
+      - "aspire"
+  cache:
+    image: "docker.io/library/redis:8.2"
+    command:
+      - "-c"
+      - "redis-server --requirepass $$REDIS_PASSWORD --save 60 1"
+    entrypoint:
+      - "/bin/sh"
+    environment:
+      REDIS_PASSWORD: "${CACHE_PASSWORD}"
+    expose:
+      - "6379"
+    volumes:
+      - type: "volume"
+        target: "/data"
+        source: "orderflow-redis-data"
+        read_only: false
+    networks:
+      - "aspire"
+  messaging:
+    image: "docker.io/library/rabbitmq:4.1-management"
+    environment:
+      RABBITMQ_DEFAULT_USER: "guest"
+      RABBITMQ_DEFAULT_PASS: "${MESSAGING_PASSWORD}"
+    expose:
+      - "5672"
+      - "15672"
+    volumes:
+      - type: "volume"
+        target: "/var/lib/rabbitmq"
+        source: "orderflow-rabbitmq-data"
+        read_only: false
+    networks:
+      - "aspire"
+  maildev:
+    image: "maildev/maildev:latest"
+    expose:
+      - "1080"
+      - "1025"
+    networks:
+      - "aspire"
+  identity:
+    image: "${IDENTITY_IMAGE}"
+    environment:
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EXCEPTION_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "in_memory"
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      HTTP_PORTS: "${IDENTITY_PORT}"
+      ConnectionStrings__eCommerce: "Host=postgres;Port=5432;Username=postgres;Password=${POSTGRES_PASSWORD};Database=eCommerce"
+      ECOMMERCE_HOST: "postgres"
+      ECOMMERCE_PORT: "5432"
+      ECOMMERCE_USERNAME: "postgres"
+      ECOMMERCE_PASSWORD: "${POSTGRES_PASSWORD}"
+      ECOMMERCE_URI: "postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/eCommerce"
+      ECOMMERCE_JDBCCONNECTIONSTRING: "jdbc:postgresql://postgres:5432/eCommerce"
+      ECOMMERCE_DATABASE: "eCommerce"
+      ConnectionStrings__messaging: "amqp://guest:${MESSAGING_PASSWORD}@messaging:5672"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://eCommerce-dev-dashboard:18889"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "identity"
+    expose:
+      - "${IDENTITY_PORT}"
+    depends_on:
+      postgres:
+        condition: "service_started"
+      messaging:
+        condition: "service_started"
+    networks:
+      - "aspire"
+  catalog-service:
+    image: "${CATALOG_SERVICE_IMAGE}"
+    environment:
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EXCEPTION_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "in_memory"
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      HTTP_PORTS: "${CATALOG_SERVICE_PORT}"
+      ConnectionStrings__catalog: "Host=postgres;Port=5432;Username=postgres;Password=${POSTGRES_PASSWORD};Database=catalog"
+      CATALOG_HOST: "postgres"
+      CATALOG_PORT: "5432"
+      CATALOG_USERNAME: "postgres"
+      CATALOG_PASSWORD: "${POSTGRES_PASSWORD}"
+      CATALOG_URI: "postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/catalog"
+      CATALOG_JDBCCONNECTIONSTRING: "jdbc:postgresql://postgres:5432/catalog"
+      CATALOG_DATABASE: "catalog"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://eCommerce-dev-dashboard:18889"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "catalog-service"
+    expose:
+      - "${CATALOG_SERVICE_PORT}"
+    depends_on:
+      postgres:
+        condition: "service_started"
+    networks:
+      - "aspire"
+  orders-service:
+    image: "${ORDERS_SERVICE_IMAGE}"
+    environment:
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EXCEPTION_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "in_memory"
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      HTTP_PORTS: "${ORDERS_SERVICE_PORT}"
+      ConnectionStrings__orders: "Host=postgres;Port=5432;Username=postgres;Password=${POSTGRES_PASSWORD};Database=orders"
+      ORDERS_HOST: "postgres"
+      ORDERS_PORT: "5432"
+      ORDERS_USERNAME: "postgres"
+      ORDERS_PASSWORD: "${POSTGRES_PASSWORD}"
+      ORDERS_URI: "postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/orders"
+      ORDERS_JDBCCONNECTIONSTRING: "jdbc:postgresql://postgres:5432/orders"
+      ORDERS_DATABASE: "orders"
+      CATALOG-SERVICE_HTTP: "http://catalog-service:${CATALOG_SERVICE_PORT}"
+      services__catalog-service__http__0: "http://catalog-service:${CATALOG_SERVICE_PORT}"
+      CATALOG-SERVICE_HTTPS: "https://catalog-service:${CATALOG_SERVICE_PORT}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://eCommerce-dev-dashboard:18889"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "orders-service"
+    expose:
+      - "${ORDERS_SERVICE_PORT}"
+    depends_on:
+      catalog-service:
+        condition: "service_started"
+      postgres:
+        condition: "service_started"
+    networks:
+      - "aspire"
+  notifications:
+    image: "${NOTIFICATIONS_IMAGE}"
+    environment:
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EXCEPTION_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "in_memory"
+      ConnectionStrings__messaging: "amqp://guest:${MESSAGING_PASSWORD}@messaging:5672"
+      Email__SmtpHost: "maildev"
+      Email__SmtpPort: "1025"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://eCommerce-dev-dashboard:18889"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "notifications"
+    depends_on:
+      messaging:
+        condition: "service_started"
+    networks:
+      - "aspire"
+  apigateway:
+    image: "${APIGATEWAY_IMAGE}"
+    environment:
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EXCEPTION_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "in_memory"
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      HTTP_PORTS: "${APIGATEWAY_PORT}"
+      ConnectionStrings__cache: "cache:6379,password=${CACHE_PASSWORD}"
+      CACHE_HOST: "cache"
+      CACHE_PORT: "6379"
+      CACHE_PASSWORD: "${CACHE_PASSWORD}"
+      CACHE_URI: "redis://:${CACHE_PASSWORD}@cache:6379"
+      IDENTITY_HTTP: "http://identity:${IDENTITY_PORT}"
+      services__identity__http__0: "http://identity:${IDENTITY_PORT}"
+      IDENTITY_HTTPS: "https://identity:${IDENTITY_PORT}"
+      CATALOG-SERVICE_HTTP: "http://catalog-service:${CATALOG_SERVICE_PORT}"
+      services__catalog-service__http__0: "http://catalog-service:${CATALOG_SERVICE_PORT}"
+      CATALOG-SERVICE_HTTPS: "https://catalog-service:${CATALOG_SERVICE_PORT}"
+      ORDERS-SERVICE_HTTP: "http://orders-service:${ORDERS_SERVICE_PORT}"
+      services__orders-service__http__0: "http://orders-service:${ORDERS_SERVICE_PORT}"
+      ORDERS-SERVICE_HTTPS: "https://orders-service:${ORDERS_SERVICE_PORT}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://eCommerce-dev-dashboard:18889"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "apigateway"
+    expose:
+      - "${APIGATEWAY_PORT}"
+    depends_on:
+      identity:
+        condition: "service_started"
+      catalog-service:
+        condition: "service_started"
+      orders-service:
+        condition: "service_started"
+    networks:
+      - "aspire"
+  frontend:
+    image: "${FRONTEND_IMAGE}"
+    environment:
+      NODE_ENV: "production"
+      APIGATEWAY_HTTP: "http://apigateway:${APIGATEWAY_PORT}"
+      services__apigateway__http__0: "http://apigateway:${APIGATEWAY_PORT}"
+      APIGATEWAY_HTTPS: "https://apigateway:${APIGATEWAY_PORT}"
+      DEV: "3000"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://eCommerce-dev-dashboard:18889"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "frontend"
+    expose:
+      - "3000"
+    networks:
+      - "aspire"
+  worker:
+    image: "${WORKER_IMAGE}"
+    environment:
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EXCEPTION_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "in_memory"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://eCommerce-dev-dashboard:18889"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_SERVICE_NAME: "worker"
+    networks:
+      - "aspire"
+networks:
+  aspire:
+    driver: "bridge"
+volumes:
+  ecommerce_postgres_data:
+    driver: "local"
+  orderflow-redis-data:
+    driver: "local"
+  orderflow-rabbitmq-data:
+    driver: "local"

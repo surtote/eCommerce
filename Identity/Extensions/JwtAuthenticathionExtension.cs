@@ -13,7 +13,7 @@ namespace Identity.Extensions
             this IServiceCollection services,
             IConfiguration configuration)
         {
-            var jwtSecret = configuration["Jwt:Secret"]
+            var jwtSecret = configuration["Jwt:Key"]
                 ?? throw new InvalidOperationException("JWT Secret is not configured");
             var jwtIssuer = configuration["Jwt:Issuer"]
                 ?? throw new InvalidOperationException("JWT Issuer is not configured");

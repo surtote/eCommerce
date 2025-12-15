@@ -16,13 +16,11 @@ export const useOrders = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // 🔹 Helper para extraer mensaje de error
   const getErrorMessage = (err: unknown): string => {
     if (err instanceof Error) return err.message;
     return 'Ocurrió un error desconocido';
   };
 
-  // 🔹 Obtener usuario y configurar token
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -39,7 +37,6 @@ export const useOrders = () => {
     if (roles.includes('Admin')) setIsAdmin(true);
   }, []);
 
-  // 🔹 Cargar mis órdenes
   const fetchMyOrders = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -53,7 +50,6 @@ export const useOrders = () => {
     }
   }, []);
 
-  // 🔹 Cargar todas las órdenes (solo admin)
   const fetchAllOrders = useCallback(async (status?: string, userId?: string) => {
     if (!isAdmin) {
       setError('No tienes permisos para ver todas las órdenes');
@@ -72,7 +68,6 @@ export const useOrders = () => {
     }
   }, [isAdmin]);
 
-  // 🔹 Obtener detalle de una orden
   const getOrderById = useCallback(async (id: string) => {
     setLoading(true);
     setError(null);
@@ -88,7 +83,6 @@ export const useOrders = () => {
     }
   }, []);
 
-  // 🔹 Obtener detalle de una orden (admin)
   const getOrderByIdAdmin = useCallback(async (id: string) => {
     if (!isAdmin) {
       setError('No tienes permisos para ver esta orden');
@@ -109,7 +103,6 @@ export const useOrders = () => {
     }
   }, [isAdmin]);
 
-  // 🔹 Crear orden
   const createOrder = useCallback(async (request: CreateOrderRequest) => {
     if (!userId) {
       setError('Debes iniciar sesión para crear una orden');
@@ -121,8 +114,6 @@ export const useOrders = () => {
     try {
       const newOrder = await orderService.createOrder(request);
       setCurrentOrder(newOrder);
-      
-      // Recargar lista de órdenes
       await fetchMyOrders();
       
       return newOrder;
@@ -134,21 +125,18 @@ export const useOrders = () => {
     }
   }, [userId, fetchMyOrders]);
 
-  // 🔹 Cancelar orden
   const cancelOrder = useCallback(async (id: string) => {
     setLoading(true);
     setError(null);
     try {
       await orderService.cancelOrder(id);
       
-      // Actualizar la lista local
       setOrders((prev) =>
         prev.map((order) =>
           order.id === id ? { ...order, status: 'Cancelled' } : order
         )
       );
 
-      // Actualizar orden actual si es la misma
       if (currentOrder?.id === id) {
         setCurrentOrder({ ...currentOrder, status: 'Cancelled' });
       }
@@ -162,7 +150,6 @@ export const useOrders = () => {
     }
   }, [currentOrder]);
 
-  // 🔹 Actualizar estado de orden (solo admin)
   const updateOrderStatus = useCallback(
     async (id: string, status: string) => {
       if (!isAdmin) {
@@ -175,14 +162,12 @@ export const useOrders = () => {
       try {
         const updatedOrder = await orderService.updateOrderStatus(id, status);
         
-        // Actualizar en la lista
         setOrders((prev) =>
           prev.map((order) =>
             order.id === id ? { ...order, status: updatedOrder.status } : order
           )
         );
 
-        // Actualizar orden actual si es la misma
         if (currentOrder?.id === id) {
           setCurrentOrder(updatedOrder);
         }
@@ -198,18 +183,15 @@ export const useOrders = () => {
     [isAdmin, currentOrder]
   );
 
-  // 🔹 Limpiar error
   const clearError = useCallback(() => {
     setError(null);
   }, []);
 
-  // 🔹 Limpiar orden actual
   const clearCurrentOrder = useCallback(() => {
     setCurrentOrder(null);
   }, []);
 
   return {
-    // Estado
     orders,
     currentOrder,
     loading,
@@ -217,7 +199,6 @@ export const useOrders = () => {
     userId,
     isAdmin,
 
-    // Métodos
     fetchMyOrders,
     fetchAllOrders,
     getOrderById,

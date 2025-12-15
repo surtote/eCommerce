@@ -16,7 +16,6 @@ export const useChats = () => {
   const getErrorMessage = (err: unknown): string =>
     err instanceof Error ? err.message : 'Ocurrió un error desconocido';
 
-  // 🔹 Leer currentUser de localStorage y setear token
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -31,7 +30,6 @@ export const useChats = () => {
     if (token) chatService.setToken(token);
   }, []);
 
-  // 🔹 Cache de nombres de usuario
   const getUserName = useCallback(async (id: string): Promise<string> => {
     if (userCache.current.has(id)) return userCache.current.get(id)!;
 
@@ -45,7 +43,6 @@ export const useChats = () => {
     }
   }, []);
 
-  // 🔹 Obtener todos los chats
   const fetchChats = useCallback(async () => {
     if (!currentUserId) return;
 
@@ -71,7 +68,6 @@ export const useChats = () => {
     }
   }, [currentUserId, getUserName]);
 
-  // 🔹 Crear chat
   const createChat = async (chatData: CreateChatRequest): Promise<Chat> => {
     if (!currentUserId) throw new Error('Usuario no autenticado');
 
@@ -94,7 +90,6 @@ export const useChats = () => {
     }
   };
 
-  // 🔹 Actualizar chat
   const updateChat = async (id: string, data: UpdateChatRequest): Promise<Chat> => {
     try {
       setLoading(true);
@@ -115,7 +110,6 @@ export const useChats = () => {
     }
   };
 
-  // 🔹 Eliminar chat
   const deleteChat = async (id: string): Promise<void> => {
     try {
       setLoading(true);

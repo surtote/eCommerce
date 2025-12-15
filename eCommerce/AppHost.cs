@@ -4,7 +4,7 @@ using Aspire.Hosting.Postgres;
 using Projects;
 
 var builder = DistributedApplication.CreateBuilder(args);
-
+builder.AddDockerComposeEnvironment("eCommerce-dev");
 // ========== PostgreSQL para Identity ==========
 var postgres = builder.AddPostgres("postgres")
     .WithLifetime(ContainerLifetime.Persistent)
@@ -53,7 +53,7 @@ var notificationsService = builder.AddProject<Projects.Notifications>("notificat
     .WithEnvironment("Email__SmtpHost", maildev.GetEndpoint("smtp").Property(EndpointProperty.Host))
     .WithEnvironment("Email__SmtpPort", maildev.GetEndpoint("smtp").Property(EndpointProperty.Port))
     .WaitFor(rabbitmq);
-// ========== API Gateway (solo uno) ==========
+
 var apiGateway = builder.AddProject<Projects.ApiGateway>("apigateway")
     .WithReference(redis)
     .WithReference(identityService)
