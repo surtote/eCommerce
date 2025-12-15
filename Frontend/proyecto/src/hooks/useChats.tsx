@@ -98,7 +98,7 @@ export const useChats = () => {
   const updateChat = async (id: string, data: UpdateChatRequest): Promise<Chat> => {
     try {
       setLoading(true);
-      const updated = await chatService.update(id, data);
+      const updated = await chatService.update(id, data as Chat);
 
       const sellerName = updated.sellerId === currentUserId ? 'Tú' : await getUserName(updated.sellerId);
       const buyerName = updated.buyerId === currentUserId ? 'Tú' : await getUserName(updated.buyerId);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useChats } from "@/hooks/useChats";
 import { useMessages } from "@/hooks/useMessages";
 import { useProducts } from "@/hooks/useProducts";

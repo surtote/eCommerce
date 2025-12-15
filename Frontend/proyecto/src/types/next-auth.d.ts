@@ -1,9 +1,9 @@
-import NextAuth, { DefaultSession } from "next-auth";
+import  { DefaultSession } from "next-auth";
 
 declare module "next-auth" {
   interface User {
     id: string;
-    token: string; // 👈 AQUI agregamos tu token real
+    token: string;
     name?: string;
   }
 
@@ -18,6 +18,6 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
-    jwt: string; // 👈 nombre del token que guardamos en callbacks.jwt
+    jwt: string;
   }
 }

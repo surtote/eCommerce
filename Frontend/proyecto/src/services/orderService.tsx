@@ -1,10 +1,8 @@
 // src/services/orderService.ts
 import { 
-  Order, 
   CreateOrderRequest, 
   OrderResponse,
   OrderListResponse,
-  UpdateOrderStatusRequest 
 } from '../types/Order';
 
 const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/orders`;

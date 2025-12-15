@@ -3,11 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { orderService } from '@/services/orderService';
 import { 
-  Order, 
   CreateOrderRequest, 
   OrderListResponse,
   OrderResponse,
-  UpdateOrderStatusRequest 
 } from '@/types/Order';
 
 export const useOrders = () => {

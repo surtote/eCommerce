@@ -10,7 +10,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CreateOrderRequest, OrderItem } from '@/types/Order';
-import { Product } from '@/types/Product';
 import {
   Select,
   SelectContent,

@@ -5,7 +5,6 @@ import { Loader2, Trash2, Edit2 } from 'lucide-react';
 import Image from 'next/image';
 import { useProducts } from '@/hooks/useProducts';
 import { CategoryDropdown } from '../components/categoryDropdown';
-import { Product } from '@/types/Product';
 import {
   Card,
   CardHeader,

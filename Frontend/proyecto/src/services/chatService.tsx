@@ -60,7 +60,7 @@ async createChat(chatData: CreateChatRequest): Promise<Chat> {
 
 
   // 🔹 Actualizar chat
-  async update(id: string, data: any): Promise<Chat> {
+  async update(id: string, data: Chat): Promise<Chat> {
     const res = await fetch(`${API_URL}/${id}`, {
       method: 'PUT',
       headers: {
