@@ -77,7 +77,7 @@ export const orderService = {
     }
   },
 
-  // 🔹 ADMIN: Obtener todas las órdenes
+  // 🔹 ADMIN: Obtener todas las órdenes (lista resumida)
   async getAllOrders(
     status?: string,
     userId?: string
@@ -93,6 +93,39 @@ export const orderService = {
     if (!res.ok) throw new Error('Error al obtener órdenes');
     const data = await res.json();
     return data.data || [];
+  },
+
+  // 🔹 ADMIN: Obtener todas las órdenes con detalles completos
+  async getAllOrdersDetailed(
+    status?: string,
+    userId?: string
+  ): Promise<OrderResponse[]> {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (userId) params.append('userId', userId);
+
+    const res = await fetch(`${API_URL}/admin?${params.toString()}`, {
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    });
+
+    if (!res.ok) throw new Error('Error al obtener órdenes');
+    const data = await res.json();
+    
+    // Si necesitas los detalles completos, hacer fetch individual de cada orden
+    const listResponse = data.data || [];
+    
+    // Alternativa: retornar la lista como OrderResponse[] (mapeando los campos disponibles)
+    return listResponse.map((order: OrderListResponse) => ({
+      id: order.id,
+      status: order.status,
+      totalAmount: order.totalAmount,
+      createdAt: order.createdAt,
+      userId: '', // No disponible en lista
+      shippingAddress: '', // No disponible en lista
+      notes: undefined,
+      updatedAt: order.createdAt,
+      orderProducts: [], // No disponible en lista
+    })) as OrderResponse[];
   },
 
   // 🔹 ADMIN: Obtener orden por ID (admin)

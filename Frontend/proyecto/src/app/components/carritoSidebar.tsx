@@ -147,7 +147,7 @@ export default function CartSidebar() {
                   <CardContent className="p-4">
                     <div className="flex gap-4">
                       {/* Imagen */}
-                      <div className="relative w-20 h-20 bg-muted rounded overflow-hidden flex-shrink-0">
+                      <div className="relative w-20 h-20 bg-muted rounded overflow-hidden shrink-0">
                         {item.imageData ? (
                           <Image
                             src={`data:${item.imageContentType};base64,${item.imageData}`}

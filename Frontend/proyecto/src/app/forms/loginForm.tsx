@@ -41,10 +41,7 @@ export function LoginForm() {
       // 🔹 Guardar usuario y token en un solo objeto
       localStorage.setItem('currentUser', JSON.stringify({ user, token }));
 
-      console.log('Token JWT:', token);
-      console.log('User ID:', user.id);
-
-      router.push('/products');
+      router.push('/dashboard');
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);

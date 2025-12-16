@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { useChats } from "@/hooks/useChats";
 import { useMessages } from "@/hooks/useMessages";
 import { useProducts } from "@/hooks/useProducts";
@@ -9,6 +11,7 @@ import ChatWindow from "./chatWindow";
 import { Product } from "@/types/Product";
 
 export default function ChatPage() {
+  const router = useRouter();
   const { products, loading, error } = useProducts();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [showProductModal, setShowProductModal] = useState(false);
@@ -56,7 +59,15 @@ export default function ChatPage() {
       {/* Panel izquierdo: lista de chats */}
       <div className="w-1/3 border-r flex flex-col">
         <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="font-semibold">Conversaciones</h2>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <h2 className="font-semibold">Conversaciones</h2>
+          </div>
           <button
             onClick={() => setShowProductModal(true)}
             className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-sm"

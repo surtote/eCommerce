@@ -42,7 +42,13 @@ export default function ProductsDashboard() {
   }
 
   const filteredProducts = products;
+  const handleLogout = () => {
+    // Limpia storage (ajusta si usas algo más)
+    localStorage.clear();
 
+    // Redirige al login
+    router.push('/');
+  };
   const handleCategoryChange = (categoryId: string | null) => {
     if (categoryId) {
       fetchProductsByCategory(categoryId);
@@ -107,11 +113,26 @@ export default function ProductsDashboard() {
 
   return (
     <>
+
+      {/* Barra superior */}
+      <div className="w-full bg-black px-6 py-3 flex justify-end">
+        <Button
+          variant="ghost"
+          className="bg-white text-black hover:bg-gray-200"
+          onClick={handleLogout}
+        >
+          Cerrar sesión
+        </Button>
+      </div>
+
       <div className="min-h-screen bg-background p-6">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
+          {/* Header con botón de navegación */}
+          <div className="mb-8 flex justify-between items-center">
             <h2 className="text-3xl font-bold tracking-tight">Re-Sports</h2>
+            <Button onClick={() => router.push('/products')}>
+              Productos
+            </Button>
           </div>
 
           {/* Filtro por categoría */}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, ArrowLeft, MapPin, CreditCard } from 'lucide-react';
 import Image from 'next/image';
@@ -62,6 +62,17 @@ export default function CheckoutPage() {
     cvv: '',
   });
 
+  const loadCart = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      if (cart.length === 0) {
+        router.push('/dashboard');
+        return;
+      }
+      setCartItems(cart);
+    }
+  }, [router]);
+
   useEffect(() => {
     setIsClient(true);
     loadCart();
@@ -74,18 +85,7 @@ export default function CheckoutPage() {
         orderService.setToken(user.token);
       }
     }
-  }, []);
-
-  const loadCart = () => {
-    if (typeof window !== 'undefined') {
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      if (cart.length === 0) {
-        router.push('/dashboard');
-        return;
-      }
-      setCartItems(cart);
-    }
-  };
+  }, [loadCart]);
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const tax = subtotal * 0.1;
@@ -112,7 +112,8 @@ export default function CheckoutPage() {
   };
 
   const handlePaymentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let { name, value } = e.target;
+    const { name } = e.target;
+    let { value } = e.target;
 
     // Formatear número de tarjeta
     if (name === 'cardNumber') {
@@ -414,7 +415,7 @@ export default function CheckoutPage() {
                       {cartItems.map(item => (
                         <div key={item.id} className="flex gap-3 bg-muted p-3 rounded-lg">
                           {item.imageData && (
-                            <div className="relative w-16 h-16 rounded overflow-hidden flex-shrink-0">
+                            <div className="relative w-16 h-16 rounded overflow-hidden shrink-0">
                               <Image
                                 src={`data:${item.imageContentType};base64,${item.imageData}`}
                                 alt={item.name}
@@ -469,7 +470,7 @@ export default function CheckoutPage() {
           </div>
 
           {/* Resumen lateral */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 mt-16">
             <Card className="sticky top-6 h-fit">
               <CardHeader>
                 <CardTitle>Resumen</CardTitle>

@@ -9,17 +9,17 @@
   "privateRegistryEmail": "aspir8@aka.ms",
   "includeDashboard": true,
   "secrets": {
-    "salt": "ATrfwx0DHS1S6sdA",
-    "hash": "kHcgTroRjtVq866VcQOdLSl710nessP3Yrmikv3y7/4=",
+    "salt": "VRxL4rfs22kBnMuo",
+    "hash": "kiG3PPyWBMs3h4vGVLZCJc9CBFIW6JE9r73uuQa5Jis=",
     "secrets": {
       "postgres-password": {
-        "value": "ATrfwx0DHS1S6sdAYONuCxQiyueMQU2W6LY8IDhB68epTKyL\u002BwHCzA5QJYVBAGMpdBg="
+        "value": "VRxL4rfs22kBnMuoQTiq6PI\u002Bcbf3BhSVlBtubIE7XhNPVAy5WRlASA6UgiDAbxpD1pM="
       },
       "cache-password": {
-        "value": "ATrfwx0DHS1S6sdAFiUBuXUV0tTyO0xmZFLG5RZam/mzXeGlgDaF/CpBLf5wK28cSRQ="
+        "value": "VRxL4rfs22kBnMuoUz55YUAtYcNdgUtbUfLUsLE0DzhUUFDac3NDJkeniiWvZnxA4ok="
       },
       "messaging-password": {
-        "value": "ATrfwx0DHS1S6sdAA9LlfHsjSBlIwM\u002BXUQ7agTw2w9OqVum8pSaA7QlPd85qOWx8VDQ="
+        "value": "VRxL4rfs22kBnMuoveYmVOrPOUqRuxURsigV1IMBQHBlZGC0RlU\u002BATOrhGLqS3xW9rc="
       }
     }
   },

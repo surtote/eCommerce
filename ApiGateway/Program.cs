@@ -18,6 +18,7 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
+    
 });
 
 // JWT authentication (validates tokens from Identity service)
