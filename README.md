@@ -1,227 +1,205 @@
-# eCommerce Platform
+# 🛒 eCommerce — Plataforma de comercio electrónico
 
-A modern microservices-based eCommerce platform built with .NET and TypeScript, featuring service-to-service communication, containerized deployment, and comprehensive testing.
+Aplicación de eCommerce desarrollada con arquitectura de **microservicios** en .NET 10, con un frontend en Next.js 15 y orquestación completa con Docker y .NET Aspire.
 
-## 📋 Table of Contents
+---
 
-- [Project Architecture](#project-architecture)
-- [Tech Stack](#tech-stack)
-- [Services Overview](#services-overview)
-- [Getting Started](#getting-started)
-- [Installation](#installation)
-- [Running the Application](#running-the-application)
-- [Project Structure](#project-structure)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Contributing](#contributing)
+## 📐 Arquitectura
 
-## 🏗️ Project Architecture
+```
+Frontend (Next.js)
+        │
+        ▼
+   API Gateway  ──── JWT Auth ──── Rate Limiting (Redis)
+        │
+   ┌────┼─────────────┐
+   │    │             │
+Identity  Catalog   Orders
+   │       │           │
+  BD      BD          BD
+(PostgreSQL)
+        │
+   RabbitMQ ──► Notifications (emails)
+                Worker (tareas en segundo plano)
+```
 
-This project follows a **microservices architecture** pattern with the following components:
+El proyecto está dividido en servicios independientes, cada uno con su propia base de datos. El API Gateway actúa como punto de entrada único, centraliza la autenticación JWT y aplica rate limiting con Redis.
 
-- **API Gateway**: Central entry point for all client requests, routing to appropriate services
-- **Identity Service**: User authentication and authorization management
-- **Catalog Service**: Product catalog and inventory management
-- **Orders Service**: Order processing and management
-- **Notifications Service**: Order and user notifications
-- **Worker Service**: Background job processing
-- **Frontend**: React/TypeScript web application
+---
 
-All services are containerized with Docker and can be orchestrated together using Docker Compose.
+## 🧩 Servicios
 
-## 💻 Tech Stack
+| Servicio | Descripción | Puerto |
+|---|---|---|
+| **API Gateway** | Entrada única. YARP reverse proxy + JWT + rate limiting | 7280 |
+| **Identity** | Registro, login, usuarios, roles y generación de tokens JWT | 8080 |
+| **Catalog** | Productos, categorías, chats entre usuarios | 8081 |
+| **Orders** | Gestión de pedidos con versioning de API (v1) | 8082 |
+| **Notifications** | Escucha eventos de RabbitMQ y envía emails | — |
+| **Worker** | BackgroundService para tareas en segundo plano | — |
+| **Frontend** | Interfaz web con Next.js 15 + React 19 | 3000 |
+
+---
+
+## 🛠️ Stack tecnológico
 
 ### Backend
-- **Framework**: .NET (ASP.NET Core)
-- **Language**: C#
-- **Architecture**: Microservices
-- **Communication**: HTTP/gRPC (API Gateway pattern)
-- **Container**: Docker
+- **ASP.NET Core** (.NET 10) — API REST con controllers y minimal APIs
+- **Entity Framework Core** — ORM con migraciones y code-first
+- **PostgreSQL** — base de datos relacional (una BD por microservicio)
+- **JWT Bearer** — autenticación stateless con roles (Admin, Customer)
+- **ASP.NET Core Identity** — gestión de usuarios y roles
+- **YARP** — reverse proxy para el API Gateway
+- **MassTransit + RabbitMQ** — mensajería asíncrona entre microservicios
+- **Redis** — rate limiting distribuido
+- **FluentValidation** — validación de requests
+- **OpenTelemetry** — observabilidad y telemetría
+- **Scalar / OpenAPI** — documentación de la API
 
 ### Frontend
-- **Framework**: React
-- **Language**: TypeScript
-- **Build Tool**: Modern JavaScript tooling (Webpack/Vite)
+- **Next.js 15** + **React 19** + **TypeScript**
+- **Tailwind CSS 4** — estilos
+- **shadcn/ui** + **Radix UI** — componentes de interfaz
+- **NextAuth** — gestión de sesión
+- **TanStack Table** — tablas de datos
 
-### Infrastructure
-- **Containerization**: Docker & Docker Compose
-- **CI/CD**: GitHub Actions (`.github/workflows`)
-- **Load Testing**: k6
+### Infraestructura
+- **Docker** + **Docker Compose** — contenerización
+- **.NET Aspire** — orquestación en desarrollo
+- **NUnit** + **Moq** — tests unitarios
 
-### Testing
-- **Framework**: .NET testing framework (xUnit/NUnit)
+---
 
-## 🎯 Services Overview
+## 🚀 Cómo ejecutar el proyecto
 
-### API Gateway (`/ApiGateway`)
-- Routes requests to appropriate microservices
-- Handles API versioning and routing
-- Entry point for frontend applications
+### Requisitos previos
+- [.NET 10 SDK](https://dotnet.microsoft.com/download)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- [Node.js 20+](https://nodejs.org/)
 
-### Identity Service (`/Identity`)
-- User authentication and authorization
-- JWT token generation and validation
-- User role management
+### Con .NET Aspire (recomendado)
 
-### Catalog Service (`/Catalog`)
-- Product management
-- Inventory tracking
-- Product search and filtering
+```bash
+# 1. Clonar el repositorio
+git clone https://github.com/surtote/eCommerce.git
+cd eCommerce
 
-### Orders Service (`/Orders`)
-- Order creation and management
-- Order status tracking
-- Order history retrieval
+# 2. Arrancar todo con Aspire (levanta BBDDs, RabbitMQ, Redis y todos los servicios)
+dotnet run --project eCommerce/eCommerce.csproj
+```
 
-### Notifications Service (`/Notifications`)
-- Email/notification dispatch
-- Event-based notification triggers
-- Notification templates
+Aspire se encarga automáticamente del orden de arranque y de conectar los servicios entre sí.
 
-### Worker Service (`/Worker`)
-- Background job processing
-- Message queue consumer
-- Scheduled tasks
-
-### Frontend (`/Frontend/proyecto`)
-- React TypeScript application
-- User interface for browsing products
-- Shopping cart and checkout flow
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- **.NET SDK**: 8.0 or higher
-- **Docker** and **Docker Compose**
-- **Node.js**: 18 or higher (for frontend development)
-- **Git**
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/surtote/eCommerce.git
-   cd eCommerce
-   ```
-
-2. **Restore .NET dependencies**
-   ```bash
-   dotnet restore
-   ```
-
-3. **Install frontend dependencies**
-   ```bash
-   cd Frontend/proyecto
-   npm install
-   cd ../..
-   ```
-
-## 📦 Running the Application
-
-### Using Docker Compose (Recommended)
+### Con Docker Compose (solo Identity + PostgreSQL)
 
 ```bash
 docker-compose up -d
 ```
 
-This will start all services:
-- API Gateway: `http://localhost:8000`
-- Frontend: `http://localhost:3000`
-- Additional services will be available internally within the Docker network
+---
 
-### Running Locally
+## 🔐 Autenticación
 
-#### Backend Services
-```bash
-# From the project root
-dotnet run --project ApiGateway/ApiGateway.csproj
-dotnet run --project Identity/Identity.csproj
-dotnet run --project Catalog/Catalog.csproj
-dotnet run --project Orders/Orders.csproj
+El sistema usa **JWT Bearer tokens**. El flujo es:
+
+1. El cliente hace `POST /api/auth/login` con email y contraseña
+2. Identity valida las credenciales y devuelve un token JWT
+3. El cliente incluye el token en cada petición: `Authorization: Bearer <token>`
+4. El API Gateway valida el token antes de reenviar la petición al microservicio
+
+### Roles disponibles
+- `Admin` — acceso completo, incluye endpoints de administración
+- `Customer` — acceso a compras y perfil propio
+
+### Usuario admin por defecto (desarrollo)
+```
+Email: admin@admin.com
+Password: Test12345.
 ```
 
-#### Frontend
-```bash
-cd Frontend/proyecto
-npm start
+---
+
+## 📡 Endpoints principales
+
+### Auth (público)
+```
+POST /api/v1/auth/register     — Registro de usuario
+POST /api/v1/auth/login        — Login, devuelve JWT
 ```
 
-## 📁 Project Structure
-
+### Productos (público)
 ```
-eCommerce/
-├── ApiGateway/              # API Gateway service
-├── Catalog/                 # Catalog microservice
-├── Ecommerce.tests/         # Unit and integration tests
-├── Frontend/                # React TypeScript frontend
-│   └── proyecto/            # Main React application
-├── Identity/                # Identity/Auth service
-├── Notifications/           # Notification service
-├── Orders/                  # Orders microservice
-├── ServiceDefaults/         # Shared service configuration
-├── Shared/                  # Shared utilities and models
-├── Worker/                  # Background worker service
-├── .github/workflows/       # CI/CD pipelines
-├── docker-compose.yml       # Docker Compose configuration
-├── eCommerce.sln            # Visual Studio solution file
-├── k6-load-test.js          # Load testing script
-└── Directory.Packages.props  # Centralized dependency management
+GET  /api/products             — Listado de productos
+GET  /api/products/{id}        — Detalle de producto
+POST /api/products             — Crear producto (autenticado)
+PUT  /api/products/{id}        — Editar producto (autenticado)
+DELETE /api/products/{id}      — Eliminar producto (autenticado)
 ```
 
-## 🧪 Testing
+### Pedidos (autenticado)
+```
+GET  /api/v1/orders/my         — Mis pedidos
+POST /api/v1/orders            — Crear pedido
+PUT  /api/v1/orders/{id}/cancel — Cancelar pedido
+```
 
-Run unit and integration tests:
+### Administración (solo Admin)
+```
+GET  /api/v1/admin/orders      — Todos los pedidos
+PUT  /api/v1/admin/orders/{id}/status — Cambiar estado de pedido
+GET  /api/v1/admin/users       — Gestión de usuarios
+```
+
+La documentación interactiva completa está disponible en `/scalar/v1` cuando el proyecto está en ejecución.
+
+---
+
+## 📨 Mensajería con RabbitMQ
+
+Los servicios se comunican de forma **asíncrona** mediante eventos de integración. Cuando ocurre algo relevante, el servicio publica un evento en RabbitMQ en lugar de llamar directamente al otro servicio.
+
+| Evento | Publicado por | Consumido por |
+|---|---|---|
+| `OrderCreatedEvent` | Orders | Notifications |
+| `UserRegisteredEvent` | Identity | Notifications |
+| `OrderCancelledEvent` | Orders | Notifications |
+
+Notifications escucha estos eventos y envía el email correspondiente al usuario.
+
+---
+
+## 🧪 Tests
+
+El proyecto incluye tests unitarios con **NUnit** y **Moq** para los servicios principales.
 
 ```bash
 dotnet test Ecommerce.tests/Ecommerce.tests.csproj
 ```
 
-### Load Testing
+Servicios con cobertura de tests: `ProductService`, `CategoryService`, `UserService`, `ChatService`, `MessageService`.
 
-Execute load tests using k6:
+---
 
-```bash
-k6 run k6-load-test.js
+## 📁 Estructura del proyecto
+
+```
+eCommerce/
+├── ApiGateway/          — Reverse proxy (YARP + JWT + Rate limiting)
+├── Identity/            — Usuarios, roles y autenticación JWT
+├── Catalog/             — Productos, categorías y chats
+├── Orders/              — Gestión de pedidos
+├── Notifications/       — Envío de emails con MassTransit
+├── Worker/              — Tareas en segundo plano
+├── Shared/              — Eventos de integración compartidos
+├── ServiceDefaults/     — Configuración común (telemetría, health checks)
+├── Ecommerce.tests/     — Tests unitarios
+├── Frontend/            — Aplicación Next.js
+├── docker-compose.yml   — Contenerización
+└── eCommerce/           — AppHost de .NET Aspire
 ```
 
-## 🐳 Deployment
+---
 
-### Docker Build
+## 📄 Licencia
 
-Build all services:
-```bash
-docker-compose build
-```
-
-### Environment Configuration
-
-Create a `.env` file in the project root for environment-specific variables (database connections, API keys, etc.)
-
-### Production Deployment
-
-The project includes GitHub Actions workflows for automated CI/CD in `.github/workflows/`. These pipelines handle:
-- Code compilation
-- Running tests
-- Docker image building
-- Deployment automation
-
-## 📝 Key Features
-
-- **Microservices Architecture**: Independently deployable services
-- **API Gateway Pattern**: Centralized request routing
-- **Authentication & Authorization**: Secure user management
-- **Order Management**: Full order lifecycle support
-- **Real-time Notifications**: Event-driven notification system
-- **Background Processing**: Worker services for async tasks
-- **Containerization**: Full Docker support for easy deployment
-- **Automated Testing**: Comprehensive test coverage
-- **Load Testing**: k6 integration for performance validation
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit pull requests or open issues for bugs and feature requests.
-
-## 📄 License
-
-This project is available on GitHub. Please check the repository for license information.
+Proyecto de desarrollo personal con fines educativos y de portfolio.
